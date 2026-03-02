@@ -83,7 +83,7 @@ function App() {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs overflow-hidden">
-              <img src="/icon-192.svg" className="w-5 h-5" alt="Q" />
+              <img src={`${import.meta.env.BASE_URL}icon-192.svg`} className="w-5 h-5" alt="Q" />
             </div>
             <div className="flex flex-col">
               <h1 className="text-xs font-black uppercase tracking-[0.4em]">¿Qué me pongo?</h1>
