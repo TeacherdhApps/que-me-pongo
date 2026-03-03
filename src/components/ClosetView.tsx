@@ -13,13 +13,22 @@ const categoryLabels: { key: Category; icon: string }[] = [
 ];
 
 export function ClosetView() {
-    const { wardrobe, add, remove } = useWardrobe();
+    const { wardrobe, isLoading, add, remove } = useWardrobe();
     const [showModal, setShowModal] = useState(false);
     const [openSection, setOpenSection] = useState<Category | null>(null);
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4 animate-pulse">
+                <i className="fas fa-circle-notch fa-spin text-4xl text-black"></i>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Cargando Armario...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-fade">

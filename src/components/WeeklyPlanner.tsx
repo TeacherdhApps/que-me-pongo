@@ -4,7 +4,7 @@ import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 
 export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 'month') => void }) {
-    const { plan, updateDay } = useWeeklyPlan();
+    const { plan, isLoading, updateDay } = useWeeklyPlan();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [editingDay, setEditingDay] = useState<{ name: string, date: string } | null>(null);
 
@@ -41,6 +41,15 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         nextDate.setDate(currentDate.getDate() + (offset * 7));
         setCurrentDate(nextDate);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4 animate-pulse">
+                <i className="fas fa-circle-notch fa-spin text-4xl text-black"></i>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Cargando Plan...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-fade">

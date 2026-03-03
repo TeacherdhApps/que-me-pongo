@@ -10,8 +10,8 @@ export function SettingsView() {
     const [importStatus, setImportStatus] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleExport = () => {
-        const json = exportAllData();
+    const handleExport = async () => {
+        const json = await exportAllData();
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -30,9 +30,9 @@ export function SettingsView() {
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = async () => {
             try {
-                importAllData(reader.result as string);
+                await importAllData(reader.result as string);
                 setImportStatus('✅ Datos importados correctamente. Recarga la página para ver los cambios.');
             } catch {
                 setImportStatus('❌ Error al importar. Verifica que el archivo sea válido.');

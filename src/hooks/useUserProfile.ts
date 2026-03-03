@@ -1,18 +1,24 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { loadUserProfile, saveUserProfile } from '../lib/wardrobeStorage';
 import type { UserProfile } from '../types';
 
 export function useUserProfile() {
-    const [profile, setProfile] = useState<UserProfile>(() => loadUserProfile());
+    const [profile, setProfile] = useState<UserProfile>({});
+    const [isLoading, setIsLoading] = useState(true);
 
-    const update = useCallback((updates: Partial<UserProfile>) => {
-        setProfile(prev => {
-            const next = { ...prev, ...updates };
-            saveUserProfile(next);
-            return next;
+    useEffect(() => {
+        loadUserProfile().then(data => {
+            setProfile(data);
+            setIsLoading(false);
         });
     }, []);
 
-    return { profile, update };
+    const update = useCallback(async (updates: Partial<UserProfile>) => {
+        const next = { ...profile, ...updates };
+        setProfile(next);
+        await saveUserProfile(next);
+    }, [profile]);
+
+    return { profile, isLoading, update };
 }

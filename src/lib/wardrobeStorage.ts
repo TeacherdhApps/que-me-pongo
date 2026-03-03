@@ -1,16 +1,39 @@
 
+import { supabase } from './supabase';
 import type { ClothingItem, WeeklyPlan, UserProfile } from '../types';
 
 const WARDROBE_KEY = 'que-me-pongo:wardrobe';
 const WEEKLY_PLAN_KEY = 'que-me-pongo:weekly-plan';
 const USER_PROFILE_KEY = 'que-me-pongo:user-profile';
 
+// --- Helpers ---
+
+async function getUserId() {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id;
+}
+
 // --- Wardrobe CRUD ---
 
-export function loadWardrobe(): ClothingItem[] {
+export async function loadWardrobe(): Promise<ClothingItem[]> {
+    const userId = await getUserId();
+
+    if (userId) {
+        const { data, error } = await supabase
+            .from('wardrobe')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error loading from Supabase:', error);
+            return [];
+        }
+        return data as ClothingItem[];
+    }
+
+    // LocalStorage Fallback
     try {
         const raw = localStorage.getItem(WARDROBE_KEY);
-        // Fallback to cc_items if que-me-pongo:wardrobe is empty (migration)
         if (!raw) {
             const legacy = localStorage.getItem('cc_items');
             if (legacy) return JSON.parse(legacy);
@@ -21,70 +44,113 @@ export function loadWardrobe(): ClothingItem[] {
     }
 }
 
-export function saveWardrobe(items: ClothingItem[]): void {
-    localStorage.setItem(WARDROBE_KEY, JSON.stringify(items));
-}
+export async function addClothingItem(item: Omit<ClothingItem, 'id'>): Promise<ClothingItem> {
+    const userId = await getUserId();
 
-export function addClothingItem(item: Omit<ClothingItem, 'id'>): ClothingItem {
+    if (userId) {
+        const { data, error } = await supabase
+            .from('wardrobe')
+            .insert([{ ...item, user_id: userId }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as ClothingItem;
+    }
+
+    // LocalStorage
     const newItem: ClothingItem = {
         ...item,
-        id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     };
-    const wardrobe = loadWardrobe();
-    saveWardrobe([...wardrobe, newItem]);
+    const wardrobe = await loadWardrobe();
+    const updated = [...wardrobe, newItem];
+    localStorage.setItem(WARDROBE_KEY, JSON.stringify(updated));
     return newItem;
 }
 
-export function updateClothingItem(id: string, updates: Partial<ClothingItem>): void {
-    const wardrobe = loadWardrobe();
+export async function updateClothingItem(id: string, updates: Partial<ClothingItem>): Promise<void> {
+    const userId = await getUserId();
+
+    if (userId && !id.startsWith('local-')) {
+        const { error } = await supabase
+            .from('wardrobe')
+            .update(updates)
+            .eq('id', id);
+        if (error) throw error;
+        return;
+    }
+
+    // LocalStorage
+    const wardrobe = await loadWardrobe();
     const updated = wardrobe.map(item => item.id === id ? { ...item, ...updates } : item);
-    saveWardrobe(updated);
+    localStorage.setItem(WARDROBE_KEY, JSON.stringify(updated));
 }
 
-export function deleteClothingItem(id: string): void {
-    const wardrobe = loadWardrobe();
-    saveWardrobe(wardrobe.filter(item => item.id !== id));
+export async function deleteClothingItem(id: string): Promise<void> {
+    const userId = await getUserId();
+
+    if (userId && !id.startsWith('local-')) {
+        const { error } = await supabase
+            .from('wardrobe')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return;
+    }
+
+    // LocalStorage
+    const wardrobe = await loadWardrobe();
+    const filtered = wardrobe.filter(item => item.id !== id);
+    localStorage.setItem(WARDROBE_KEY, JSON.stringify(filtered));
 }
 
 // --- Weekly Plan ---
 
-export function loadWeeklyPlan(): WeeklyPlan {
+export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
+    const userId = await getUserId();
+
+    if (userId) {
+        const { data, error } = await supabase
+            .from('plans')
+            .select('plan_data')
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+            console.error('Error loading plan from Supabase:', error);
+        }
+        return data?.plan_data || {};
+    }
+
+    // Local Fallback
     try {
         const raw = localStorage.getItem(WEEKLY_PLAN_KEY);
         if (raw) return JSON.parse(raw);
-
-        // Fallback to cc_plan migration
-        const legacy = localStorage.getItem('cc_plan');
-        if (legacy) {
-            const legacyPlan = JSON.parse(legacy);
-            const wardrobe = loadWardrobe();
-            const migratedPlan: WeeklyPlan = {};
-
-            Object.entries(legacyPlan).forEach(([day, ids]) => {
-                if (Array.isArray(ids)) {
-                    migratedPlan[day] = {
-                        day,
-                        items: ids
-                            .map(id => wardrobe.find(item => item.id == id || item.id === String(id)))
-                            .filter(Boolean) as ClothingItem[]
-                    };
-                }
-            });
-            return migratedPlan;
-        }
         return {};
     } catch {
         return {};
     }
 }
 
-export function saveWeeklyPlan(plan: WeeklyPlan): void {
+export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
+    const userId = await getUserId();
+
+    if (userId) {
+        const { error } = await supabase
+            .from('plans')
+            .upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
+        if (error) throw error;
+        return;
+    }
+
     localStorage.setItem(WEEKLY_PLAN_KEY, JSON.stringify(plan));
 }
 
 // --- User Profile ---
 
-export function loadUserProfile(): UserProfile {
+export async function loadUserProfile(): Promise<UserProfile> {
+    // Note: Profile can later be moved to a 'profiles' table in Supabase
     try {
         const raw = localStorage.getItem(USER_PROFILE_KEY);
         return raw ? JSON.parse(raw) : {};
@@ -93,34 +159,48 @@ export function loadUserProfile(): UserProfile {
     }
 }
 
-export function saveUserProfile(profile: UserProfile): void {
+export async function saveUserProfile(profile: UserProfile): Promise<void> {
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
 }
 
 // --- Export / Import ---
 
-interface AppDataExport {
-    version: 1;
-    exportedAt: string;
-    wardrobe: ClothingItem[];
-    weeklyPlan: WeeklyPlan;
-    userProfile: UserProfile;
-}
-
-export function exportAllData(): string {
-    const data: AppDataExport = {
+export async function exportAllData(): Promise<string> {
+    const data = {
         version: 1,
         exportedAt: new Date().toISOString(),
-        wardrobe: loadWardrobe(),
-        weeklyPlan: loadWeeklyPlan(),
-        userProfile: loadUserProfile(),
+        wardrobe: await loadWardrobe(),
+        weeklyPlan: await loadWeeklyPlan(),
+        userProfile: await loadUserProfile(),
     };
     return JSON.stringify(data, null, 2);
 }
 
-export function importAllData(jsonString: string): void {
-    const data: AppDataExport = JSON.parse(jsonString);
-    if (data.wardrobe) saveWardrobe(data.wardrobe);
-    if (data.weeklyPlan) saveWeeklyPlan(data.weeklyPlan);
-    if (data.userProfile) saveUserProfile(data.userProfile);
+export async function importAllData(jsonString: string): Promise<void> {
+    const data = JSON.parse(jsonString);
+    const userId = await getUserId();
+
+    if (userId) {
+        // Import to Supabase
+        if (data.wardrobe) {
+            // Clear existing and insert new (or just upsert)
+            // For simplicity, we'll just insert everything with the new user_id
+            const wardrobeToImport = data.wardrobe.map((item: any) => {
+                const { id, ...rest } = item;
+                return { ...rest, user_id: userId };
+            });
+            await supabase.from('wardrobe').insert(wardrobeToImport);
+        }
+        if (data.weeklyPlan) {
+            await saveWeeklyPlan(data.weeklyPlan);
+        }
+        if (data.userProfile) {
+            await saveUserProfile(data.userProfile);
+        }
+    } else {
+        // Import to LocalStorage
+        if (data.wardrobe) localStorage.setItem(WARDROBE_KEY, JSON.stringify(data.wardrobe));
+        if (data.weeklyPlan) localStorage.setItem(WEEKLY_PLAN_KEY, JSON.stringify(data.weeklyPlan));
+        if (data.userProfile) localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(data.userProfile));
+    }
 }

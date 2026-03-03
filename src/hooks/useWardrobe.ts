@@ -1,24 +1,32 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { loadWardrobe, addClothingItem, updateClothingItem, deleteClothingItem, loadWeeklyPlan, saveWeeklyPlan } from '../lib/wardrobeStorage';
 import type { ClothingItem, Category, WeeklyPlan, DailyOutfit } from '../types';
 
 export function useWardrobe() {
-    const [wardrobe, setWardrobe] = useState<ClothingItem[]>(() => loadWardrobe());
+    const [wardrobe, setWardrobe] = useState<ClothingItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const add = useCallback((item: Omit<ClothingItem, 'id'>) => {
-        const newItem = addClothingItem(item);
-        setWardrobe(prev => [...prev, newItem]);
+    useEffect(() => {
+        loadWardrobe().then(data => {
+            setWardrobe(data);
+            setIsLoading(false);
+        });
+    }, []);
+
+    const add = useCallback(async (item: Omit<ClothingItem, 'id'>) => {
+        const newItem = await addClothingItem(item);
+        setWardrobe(prev => [newItem, ...prev]);
         return newItem;
     }, []);
 
-    const update = useCallback((id: string, updates: Partial<ClothingItem>) => {
-        updateClothingItem(id, updates);
+    const update = useCallback(async (id: string, updates: Partial<ClothingItem>) => {
+        await updateClothingItem(id, updates);
         setWardrobe(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
     }, []);
 
-    const remove = useCallback((id: string) => {
-        deleteClothingItem(id);
+    const remove = useCallback(async (id: string) => {
+        await deleteClothingItem(id);
         setWardrobe(prev => prev.filter(item => item.id !== id));
     }, []);
 
@@ -26,20 +34,25 @@ export function useWardrobe() {
         return wardrobe.filter(item => item.category === category);
     }, [wardrobe]);
 
-    return { wardrobe, add, update, remove, filterByCategory };
+    return { wardrobe, isLoading, add, update, remove, filterByCategory };
 }
 
 
 export function useWeeklyPlan() {
-    const [plan, setPlan] = useState<WeeklyPlan>(() => loadWeeklyPlan());
+    const [plan, setPlan] = useState<WeeklyPlan>({});
+    const [isLoading, setIsLoading] = useState(true);
 
-    const updateDay = useCallback((day: string, outfit: DailyOutfit) => {
-        setPlan(prev => {
-            const next = { ...prev, [day]: outfit };
-            saveWeeklyPlan(next);
-            return next;
+    useEffect(() => {
+        loadWeeklyPlan().then(data => {
+            setPlan(data);
+            setIsLoading(false);
         });
     }, []);
 
-    return { plan, updateDay };
+    const updateDay = useCallback(async (day: string, outfit: DailyOutfit) => {
+        setPlan(prev => ({ ...prev, [day]: outfit }));
+        await saveWeeklyPlan({ ...plan, [day]: outfit });
+    }, [plan]);
+
+    return { plan, isLoading, updateDay };
 }

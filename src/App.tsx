@@ -4,7 +4,9 @@ import { ClosetView } from './components/ClosetView';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
 import { MonthlyPlanner } from './components/MonthlyPlanner';
 import { SettingsView } from './components/SettingsView';
+import { AuthView } from './components/AuthView';
 import { useUserProfile } from './hooks/useUserProfile';
+import { supabase } from './lib/supabase';
 import type { WeatherData } from './types';
 
 // Map WMO weather codes to Spanish descriptions
@@ -23,13 +25,27 @@ function wmoCodeToCondition(code: number): string {
 
 function App() {
   const { profile } = useUserProfile();
-  const [view, setView] = useState<'closet' | 'planner' | 'settings'>('closet');
+  const [session, setSession] = useState<any>(null);
+  const [view, setView] = useState<'closet' | 'planner' | 'settings' | 'auth'>('closet');
   const [planSubView, setPlanSubView] = useState<'week' | 'month'>('week');
   const [weather, setWeather] = useState<WeatherData>({
     temp: 0,
     condition: 'Cargando...',
     city: 'Ubicando...'
   });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) setView('closet');
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
@@ -76,6 +92,11 @@ function App() {
     }
   }, []);
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setView('auth');
+  };
+
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
@@ -90,43 +111,62 @@ function App() {
               <span className="text-[8px] font-medium text-zinc-300 tracking-widest">By: TeacherdhApps</span>
             </div>
           </div>
-          <nav className="flex gap-8">
-            {(['closet', 'planner', 'settings'] as const).map(t => (
+          {session && (
+            <nav className="flex gap-8">
+              {(['closet', 'planner', 'settings'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setView(t)}
+                  className={`text-[10px] font-bold uppercase tracking-widest transition-opacity relative py-1 ${view === t ? 'opacity-100' : 'opacity-30 hover:opacity-100'
+                    }`}
+                >
+                  {t === 'closet' ? 'Armario' : t === 'planner' ? 'Plan' : 'Ajustes'}
+                  {view === t && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-black animate-fade"></span>
+                  )}
+                </button>
+              ))}
+            </nav>
+          )}
+          <div className="flex items-center gap-6">
+            <div className="text-[10px] font-bold bg-zinc-100 px-3 py-1 rounded-full shadow-sm flex items-center gap-2">
+              <span className="text-zinc-500">📍 {weather.city}</span>
+              <span>{weather.temp}°C · {weather.condition}</span>
+            </div>
+            {session && (
               <button
-                key={t}
-                onClick={() => setView(t)}
-                className={`text-[10px] font-bold uppercase tracking-widest transition-opacity relative py-1 ${view === t ? 'opacity-100' : 'opacity-30 hover:opacity-100'
-                  }`}
+                onClick={logout}
+                className="text-[10px] font-bold uppercase tracking-widest opacity-30 hover:opacity-100 transition-opacity"
+                title="Cerrar Sesión"
               >
-                {t === 'closet' ? 'Armario' : t === 'planner' ? 'Plan' : 'Ajustes'}
-                {view === t && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-black animate-fade"></span>
-                )}
+                <i className="fas fa-sign-out-alt"></i>
               </button>
-            ))}
-          </nav>
-          <div className="text-[10px] font-bold bg-zinc-100 px-3 py-1 rounded-full shadow-sm flex items-center gap-2">
-            <span className="text-zinc-500">📍 {weather.city}</span>
-            <span>{weather.temp}°C · {weather.condition}</span>
+            )}
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 pt-12">
-        {view !== 'settings' && (
-          <div className="mb-8 animate-fade">
-            <h2 className="text-xl font-black uppercase tracking-widest text-zinc-800">
-              ¡Buen día! {profile.name && <span className="text-zinc-400">{profile.name}</span>}
-            </h2>
-          </div>
+        {!session ? (
+          <AuthView onAuthSuccess={() => setView('closet')} />
+        ) : (
+          <>
+            {view !== 'settings' && (
+              <div className="mb-8 animate-fade">
+                <h2 className="text-xl font-black uppercase tracking-widest text-zinc-800">
+                  ¡Buen día! {profile.name && <span className="text-zinc-400">{profile.name}</span>}
+                </h2>
+              </div>
+            )}
+            {view === 'closet' && <ClosetView />}
+            {view === 'planner' && (
+              planSubView === 'week'
+                ? <WeeklyPlanner onViewChange={setPlanSubView} />
+                : <MonthlyPlanner onViewChange={setPlanSubView} />
+            )}
+            {view === 'settings' && <SettingsView />}
+          </>
         )}
-        {view === 'closet' && <ClosetView />}
-        {view === 'planner' && (
-          planSubView === 'week'
-            ? <WeeklyPlanner onViewChange={setPlanSubView} />
-            : <MonthlyPlanner onViewChange={setPlanSubView} />
-        )}
-        {view === 'settings' && <SettingsView />}
       </main>
     </div>
   );
