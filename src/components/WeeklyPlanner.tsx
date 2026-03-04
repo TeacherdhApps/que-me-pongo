@@ -97,7 +97,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                             </div>
                             <div className="flex -space-x-4">
                                 {(plan[day.date]?.items || []).map(itm => (
-                                    <img key={itm.id} src={itm.image} className="w-12 h-12 rounded-full border-2 border-white object-cover" alt={itm.name} />
+                                    <img key={itm.id} src={itm.image} loading="lazy" className="w-12 h-12 rounded-full border-2 border-white object-cover" alt={itm.name} />
                                 ))}
                                 {(!plan[day.date] || plan[day.date].items.length === 0) && (
                                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Outfit vacío</span>

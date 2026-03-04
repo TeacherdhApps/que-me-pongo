@@ -1,9 +1,9 @@
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { AddItemModal } from './AddItemModal';
 import { Categories } from '../types';
-import type { Category } from '../types';
+import type { Category, ClothingItem } from '../types';
 
 const categoryLabels: { key: Category; icon: string }[] = [
     { key: Categories.TOP, icon: 'fa-shirt' },
@@ -11,6 +11,44 @@ const categoryLabels: { key: Category; icon: string }[] = [
     { key: Categories.SHOES, icon: 'fa-shoe-prints' },
     { key: Categories.ACCESSORY, icon: 'fa-gem' },
 ];
+
+/**
+ * Memoized ClothingCard to prevent unnecessary re-renders in the grid.
+ * Includes a premium loading skeleton and lazy loading.
+ */
+const ClothingCard = memo(({ item, onRemove }: { item: ClothingItem; onRemove: (id: string, url: string) => void }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    return (
+        <div className="clothing-card group cursor-pointer animate-fade">
+            <div className="aspect-[3/4] bg-zinc-50 rounded-[2.5rem] overflow-hidden relative border border-zinc-100 shadow-sm transition-all group-hover:shadow-md">
+                {/* Skeleton Shimmer */}
+                {!isLoaded && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-zinc-50 via-zinc-100 to-zinc-50 bg-[length:200%_100%] animate-shimmer"></div>
+                )}
+
+                <img
+                    src={item.image}
+                    loading="lazy"
+                    onLoad={() => setIsLoaded(true)}
+                    className={`w-full h-full object-cover transition-all duration-700 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+                />
+
+                <button
+                    onClick={(e) => { e.stopPropagation(); onRemove(item.id, item.image); }}
+                    className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:bg-red-50 hover:text-red-500 z-10"
+                >
+                    <i className="fas fa-times text-[10px]"></i>
+                </button>
+            </div>
+            <div className="mt-4 px-2">
+                <p className="text-[10px] font-black uppercase tracking-widest truncate">{item.name}</p>
+            </div>
+        </div>
+    );
+});
+
+ClothingCard.displayName = 'ClothingCard';
 
 export function ClosetView() {
     const { wardrobe, isLoading, add, remove } = useWardrobe();
@@ -71,27 +109,14 @@ export function ClosetView() {
                             </button>
 
                             {isOpen && (
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-10 gap-x-6 pt-8 pb-4 px-2 animate-fade">
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-10 gap-x-6 pt-8 pb-4 px-2">
                                     {items.length === 0 ? (
                                         <p className="col-span-full text-center text-zinc-300 text-xs font-bold uppercase tracking-widest py-8">
                                             Sin prendas en esta categoría
                                         </p>
                                     ) : (
                                         items.map(item => (
-                                            <div key={item.id} className="clothing-card group cursor-pointer">
-                                                <div className="aspect-[3/4] bg-zinc-50 rounded-[2.5rem] overflow-hidden relative border border-zinc-100 shadow-sm transition-all group-hover:shadow-md">
-                                                    <img src={item.image} className="w-full h-full object-cover" />
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); remove(item.id); }}
-                                                        className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:bg-red-50 hover:text-red-500"
-                                                    >
-                                                        <i className="fas fa-times text-[10px]"></i>
-                                                    </button>
-                                                </div>
-                                                <div className="mt-4 px-2">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest truncate">{item.name}</p>
-                                                </div>
-                                            </div>
+                                            <ClothingCard key={item.id} item={item} onRemove={remove} />
                                         ))
                                     )}
                                 </div>

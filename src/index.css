@@ -46,8 +46,28 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fastFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .animate-fade {
   animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fast-fade {
+  animation: fastFade 0.3s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f4f4f5 25%, #e4e4e7 50%, #f4f4f5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
 }
 
 /* Base styles for buttons and interactive elements */

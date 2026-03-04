@@ -5,12 +5,68 @@ import type { ClothingItem, WeeklyPlan, UserProfile } from '../types';
 const WARDROBE_KEY = 'que-me-pongo:wardrobe';
 const WEEKLY_PLAN_KEY = 'que-me-pongo:weekly-plan';
 const USER_PROFILE_KEY = 'que-me-pongo:user-profile';
+const IMAGE_BUCKET = 'wardrobe-images';
 
 // --- Helpers ---
 
 async function getUserId() {
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id;
+}
+
+// --- Image Storage ---
+
+/**
+ * Converts a base64 data URL to a File object.
+ */
+function base64ToFile(base64: string, filename: string): File {
+    const [header, data] = base64.split(',');
+    const mimeMatch = header.match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const byteString = atob(data);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new File([ab], filename, { type: mime });
+}
+
+/**
+ * Uploads a base64 image to Supabase Storage and returns the public URL.
+ */
+export async function uploadImage(base64Image: string, userId: string): Promise<string> {
+    const ext = base64Image.startsWith('data:image/png') ? 'png' : 'jpg';
+    const filename = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const file = base64ToFile(base64Image, filename);
+
+    const { error } = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(filename, file, { contentType: file.type, upsert: false });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+        .from(IMAGE_BUCKET)
+        .getPublicUrl(filename);
+
+    return urlData.publicUrl;
+}
+
+/**
+ * Deletes an image from Supabase Storage given its public URL.
+ */
+export async function deleteImage(imageUrl: string): Promise<void> {
+    try {
+        // Extract the path after /object/public/wardrobe-images/
+        const marker = `/object/public/${IMAGE_BUCKET}/`;
+        const idx = imageUrl.indexOf(marker);
+        if (idx === -1) return; // Not a Supabase Storage URL, skip
+        const path = imageUrl.substring(idx + marker.length);
+        await supabase.storage.from(IMAGE_BUCKET).remove([path]);
+    } catch (err) {
+        console.error('Error deleting image from storage:', err);
+    }
 }
 
 // --- Wardrobe CRUD ---
@@ -87,10 +143,15 @@ export async function updateClothingItem(id: string, updates: Partial<ClothingIt
     localStorage.setItem(WARDROBE_KEY, JSON.stringify(updated));
 }
 
-export async function deleteClothingItem(id: string): Promise<void> {
+export async function deleteClothingItem(id: string, imageUrl?: string): Promise<void> {
     const userId = await getUserId();
 
     if (userId && !id.startsWith('local-')) {
+        // Delete image from Storage first
+        if (imageUrl) {
+            await deleteImage(imageUrl);
+        }
+
         const { error } = await supabase
             .from('wardrobe')
             .delete()
@@ -150,7 +211,30 @@ export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
 // --- User Profile ---
 
 export async function loadUserProfile(): Promise<UserProfile> {
-    // Note: Profile can later be moved to a 'profiles' table in Supabase
+    const userId = await getUserId();
+
+    if (userId) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error loading profile from Supabase:', error);
+        }
+        if (data) {
+            return {
+                name: data.name ?? undefined,
+                sex: data.sex ?? undefined,
+                age: data.age ?? undefined,
+                weight: data.weight ?? undefined,
+                height: data.height ?? undefined,
+            };
+        }
+    }
+
+    // LocalStorage fallback
     try {
         const raw = localStorage.getItem(USER_PROFILE_KEY);
         return raw ? JSON.parse(raw) : {};
@@ -160,6 +244,25 @@ export async function loadUserProfile(): Promise<UserProfile> {
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
+    const userId = await getUserId();
+
+    if (userId) {
+        const { error } = await supabase
+            .from('profiles')
+            .upsert({
+                user_id: userId,
+                name: profile.name || null,
+                sex: profile.sex || null,
+                age: profile.age || null,
+                weight: profile.weight || null,
+                height: profile.height || null,
+            }, { onConflict: 'user_id' });
+        if (error) {
+            console.error('Error saving profile to Supabase:', error);
+        }
+        return;
+    }
+
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
 }
 
@@ -183,12 +286,20 @@ export async function importAllData(jsonString: string): Promise<void> {
     if (userId) {
         // Import to Supabase
         if (data.wardrobe) {
-            // Clear existing and insert new (or just upsert)
-            // For simplicity, we'll just insert everything with the new user_id
-            const wardrobeToImport = data.wardrobe.map((item: any) => {
+            const wardrobeToImport = [];
+            for (const item of data.wardrobe) {
                 const { id, ...rest } = item;
-                return { ...rest, user_id: userId };
-            });
+                let image = rest.image;
+                // Upload base64 images to Storage
+                if (image && image.startsWith('data:')) {
+                    try {
+                        image = await uploadImage(image, userId);
+                    } catch (err) {
+                        console.error('Error uploading image during import:', err);
+                    }
+                }
+                wardrobeToImport.push({ ...rest, image, user_id: userId });
+            }
             await supabase.from('wardrobe').insert(wardrobeToImport);
         }
         if (data.weeklyPlan) {

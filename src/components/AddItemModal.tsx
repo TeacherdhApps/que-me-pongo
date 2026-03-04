@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Categories, type Category, type ClothingItem } from '../types';
 import { resizeImage } from '../lib/imageResizer';
+import { uploadImage } from '../lib/wardrobeStorage';
+import { supabase } from '../lib/supabase';
 
 interface AddItemModalProps {
     onClose: () => void;
@@ -54,16 +56,34 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
         }
     }, []);
 
-    const submit = () => {
+    const [isUploading, setIsUploading] = useState(false);
+
+    const submit = async () => {
         if (!name || !image) return;
-        onAdd({
-            name,
-            category,
-            image,
-            color: '',
-            tags: []
-        });
-        onClose();
+        setIsUploading(true);
+        try {
+            let finalImage = image;
+
+            // If logged in, upload to Supabase Storage
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                finalImage = await uploadImage(image, user.id);
+            }
+
+            onAdd({
+                name,
+                category,
+                image: finalImage,
+                color: '',
+                tags: []
+            });
+            onClose();
+        } catch (err) {
+            console.error('Error uploading image:', err);
+            alert('Error al subir la imagen. Intenta de nuevo.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
@@ -150,10 +170,10 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
 
                 <button
                     onClick={submit}
-                    disabled={!name || !image || isProcessing}
+                    disabled={!name || !image || isProcessing || isUploading}
                     className="w-full py-5 bg-black text-white rounded-full text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isProcessing ? 'Procesando...' : 'Guardar Pieza'}
+                    {isProcessing ? 'Procesando...' : isUploading ? 'Subiendo...' : 'Guardar Pieza'}
                 </button>
             </div>
         </div>

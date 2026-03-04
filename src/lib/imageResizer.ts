@@ -3,7 +3,7 @@
  * Resizes a base64 image to a maximum dimension while maintaining aspect ratio
  * and returns it as a compressed JPEG base64 string.
  */
-export async function resizeImage(base64Str: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> {
+export async function resizeImage(base64Str: string, maxWidth = 800, maxHeight = 800, quality = 0.6): Promise<string> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = base64Str;

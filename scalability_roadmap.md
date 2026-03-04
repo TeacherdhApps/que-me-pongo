@@ -5,10 +5,11 @@ To grow from a personal tool to a scalable PWA with hundreds of items and a mone
 ## 1. Technical Scalability
 Current `localStorage` is limited to ~5MB. Storing 100-200 high-res images will quickly crash the storage or slow down the app.
 
-### Phase 1: Cloud Backend (Supabase or Firebase)
-- **Database**: Move wardrobe data and planning to a real-time database (PostgreSQL/Supabase).
-- **Authentication**: Enable user accounts (Google, Email) so users can access their closet from any device.
-- **Image Storage**: Upload images to a Cloud Bucket (Supabase Storage/S3) rather than storing them as raw data strings.
+### Phase 1: Cloud Backend (Supabase) ✅ 100% Complete
+- **Database**: Moved wardrobe data and planning to Supabase (PostgreSQL).
+- **Authentication**: Enabled user accounts via Google and Email sign-in.
+- **Image Storage**: Implemented image uploads to Supabase Storage (no more base64 inline strings).
+- **User Profile**: Profiles migrated to dedicated Supabase table.
 
 ### Phase 2: Performance
 - **Lazy Loading**: Only load images as the user scrolls.

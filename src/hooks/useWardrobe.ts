@@ -25,8 +25,8 @@ export function useWardrobe() {
         setWardrobe(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
     }, []);
 
-    const remove = useCallback(async (id: string) => {
-        await deleteClothingItem(id);
+    const remove = useCallback(async (id: string, imageUrl?: string) => {
+        await deleteClothingItem(id, imageUrl);
         setWardrobe(prev => prev.filter(item => item.id !== id));
     }, []);
 
