@@ -165,8 +165,7 @@ export function SettingsView() {
                                     return;
                                 }
                                 // Lemon Squeezy Checkout URL with custom user_id data
-                                // IMPORTANT: Replace with your real Checkout Link from LS Dashboard
-                                const LS_CHECKOUT_URL = `https://que-me-pongo.lemonsqueezy.com/checkout/buy/your-product-id?checkout[custom][user_id]=${user.id}`;
+                                const LS_CHECKOUT_URL = `https://quemepongo.lemonsqueezy.com/checkout/buy/2131fda6-1821-42d0-a7a0-c9eac6dd29ae?checkout[custom][user_id]=${user.id}`;
                                 window.open(LS_CHECKOUT_URL, '_blank');
                             }}
                         >
