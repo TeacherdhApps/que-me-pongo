@@ -1,4 +1,5 @@
 
+import { get, set } from 'idb-keyval';
 import { supabase } from './supabase';
 import type { ClothingItem, WeeklyPlan, UserProfile } from '../types';
 
@@ -93,14 +94,25 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
         return data as ClothingItem[];
     }
 
-    // LocalStorage Fallback
+    // LocalStorage/IndexedDB Fallback
     try {
-        const raw = localStorage.getItem(WARDROBE_KEY);
-        if (!raw) {
+        let raw = await get<string>(WARDROBE_KEY);
+        if (raw) return JSON.parse(raw);
+
+        // Migrate from localStorage if needed
+        const fallback = localStorage.getItem(WARDROBE_KEY);
+        if (!fallback) {
             const legacy = localStorage.getItem('cc_items');
-            if (legacy) return JSON.parse(legacy);
+            if (legacy) {
+                await set(WARDROBE_KEY, legacy);
+                return JSON.parse(legacy);
+            }
         }
-        return raw ? JSON.parse(raw) : [];
+        if (fallback) {
+            await set(WARDROBE_KEY, fallback);
+            return JSON.parse(fallback);
+        }
+        return [];
     } catch {
         return [];
     }
@@ -127,7 +139,7 @@ export async function addClothingItem(item: Omit<ClothingItem, 'id'>): Promise<C
     };
     const wardrobe = await loadWardrobe();
     const updated = [...wardrobe, newItem];
-    localStorage.setItem(WARDROBE_KEY, JSON.stringify(updated));
+    await set(WARDROBE_KEY, JSON.stringify(updated));
     return newItem;
 }
 
@@ -146,30 +158,49 @@ export async function updateClothingItem(id: string, updates: Partial<ClothingIt
     // LocalStorage
     const wardrobe = await loadWardrobe();
     const updated = wardrobe.map(item => item.id === id ? { ...item, ...updates } : item);
-    localStorage.setItem(WARDROBE_KEY, JSON.stringify(updated));
+    await set(WARDROBE_KEY, JSON.stringify(updated));
 }
 
-export async function deleteClothingItem(id: string, imageUrl?: string): Promise<void> {
+export async function deleteClothingItem(id: string, imageUrl?: string): Promise<boolean> {
     const userId = await getUserId();
 
     if (userId && !id.startsWith('local-')) {
-        // Delete image from Storage first
+        console.log(`Attempting to delete item ${id} for user ${userId}`);
+
+        // Delete from DB first. We use .eq('user_id', userId) as a safety measure
+        // even if RLS is enabled, to ensure we only affect the user's own data.
+        const { error, count } = await supabase
+            .from('wardrobe')
+            .delete({ count: 'exact' })
+            .eq('id', id)
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('Error deleting from Supabase:', error);
+            throw error;
+        }
+
+        // If count is 0, it means no rows were deleted (maybe already gone or wrong user)
+        if (count === 0) {
+            console.warn(`No item found to delete with id ${id} for user ${userId}`);
+            return false;
+        }
+
+        // Only delete the image if the database record was successfully removed
         if (imageUrl) {
             await deleteImage(imageUrl);
         }
 
-        const { error } = await supabase
-            .from('wardrobe')
-            .delete()
-            .eq('id', id);
-        if (error) throw error;
-        return;
+        return true;
     }
 
     // LocalStorage
+    console.log(`Deleting local item ${id}`);
     const wardrobe = await loadWardrobe();
     const filtered = wardrobe.filter(item => item.id !== id);
-    localStorage.setItem(WARDROBE_KEY, JSON.stringify(filtered));
+    const itemExists = wardrobe.length !== filtered.length;
+    await set(WARDROBE_KEY, JSON.stringify(filtered));
+    return itemExists;
 }
 
 // --- Weekly Plan ---
@@ -192,8 +223,15 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
     // Local Fallback
     try {
-        const raw = localStorage.getItem(WEEKLY_PLAN_KEY);
+        let raw = await get<string>(WEEKLY_PLAN_KEY);
         if (raw) return JSON.parse(raw);
+
+        // Migrate from localStorage
+        const fallback = localStorage.getItem(WEEKLY_PLAN_KEY);
+        if (fallback) {
+            await set(WEEKLY_PLAN_KEY, fallback);
+            return JSON.parse(fallback);
+        }
         return {};
     } catch {
         return {};
@@ -211,7 +249,7 @@ export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
         return;
     }
 
-    localStorage.setItem(WEEKLY_PLAN_KEY, JSON.stringify(plan));
+    await set(WEEKLY_PLAN_KEY, JSON.stringify(plan));
 }
 
 // --- User Profile ---
@@ -243,8 +281,16 @@ export async function loadUserProfile(): Promise<UserProfile> {
 
     // LocalStorage fallback
     try {
-        const raw = localStorage.getItem(USER_PROFILE_KEY);
-        return raw ? JSON.parse(raw) : {};
+        let raw = await get<string>(USER_PROFILE_KEY);
+        if (raw) return JSON.parse(raw);
+
+        // Migrate from localStorage
+        const fallback = localStorage.getItem(USER_PROFILE_KEY);
+        if (fallback) {
+            await set(USER_PROFILE_KEY, fallback);
+            return JSON.parse(fallback);
+        }
+        return {};
     } catch {
         return {};
     }
@@ -271,7 +317,7 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
         return;
     }
 
-    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+    await set(USER_PROFILE_KEY, JSON.stringify(profile));
 }
 
 // --- Export / Import ---
@@ -317,9 +363,9 @@ export async function importAllData(jsonString: string): Promise<void> {
             await saveUserProfile(data.userProfile);
         }
     } else {
-        // Import to LocalStorage
-        if (data.wardrobe) localStorage.setItem(WARDROBE_KEY, JSON.stringify(data.wardrobe));
-        if (data.weeklyPlan) localStorage.setItem(WEEKLY_PLAN_KEY, JSON.stringify(data.weeklyPlan));
-        if (data.userProfile) localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(data.userProfile));
+        // Import to IndexedDB
+        if (data.wardrobe) await set(WARDROBE_KEY, JSON.stringify(data.wardrobe));
+        if (data.weeklyPlan) await set(WEEKLY_PLAN_KEY, JSON.stringify(data.weeklyPlan));
+        if (data.userProfile) await set(USER_PROFILE_KEY, JSON.stringify(data.userProfile));
     }
 }
