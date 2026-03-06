@@ -8,7 +8,7 @@ export class WardrobeDB extends Dexie {
 
     constructor() {
         super('QueMePongoDB');
-        this.version(1).stores({
+        this.version(2).stores({
             wardrobe: 'id, category, created_at',
             plans: 'id',
             profiles: 'id'

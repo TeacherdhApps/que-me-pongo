@@ -102,8 +102,11 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
 
         if (raw) {
             const parsed = JSON.parse(raw);
-            await db.wardrobe.bulkAdd(parsed);
-            return parsed;
+            const items = Array.isArray(parsed) ? parsed : [];
+            await db.wardrobe.bulkPut(items);
+            localStorage.removeItem('que-me-pongo:wardrobe');
+            localStorage.removeItem('cc_items');
+            return items;
         }
         return [];
     } catch {
@@ -157,11 +160,12 @@ export async function updateClothingItem(id: string, updates: Partial<ClothingIt
     // Dexie Storage
     try {
         await db.wardrobe.update(id, updates);
+        await db.wardrobe.update(Number(id) as any, updates); // Fallback for numeric IDs from legacy localStorage
     } catch (error: any) {
-        if (error.name === 'QuotaExceededError') {
+        if (error?.name === 'QuotaExceededError') {
             throw error;
         }
-        throw error;
+        console.error('Dexie update error:', error);
     }
 }
 
@@ -200,10 +204,14 @@ export async function deleteClothingItem(id: string, imageUrl?: string): Promise
 
     // Dexie Storage
     console.log(`Deleting local item ${id}`);
-    const exists = await db.wardrobe.get(id);
-    if (!exists) return false;
-    await db.wardrobe.delete(id);
-    return true;
+    try {
+        await db.wardrobe.delete(id);
+        await db.wardrobe.delete(Number(id) as any); // Fallback for numeric IDs
+        return true;
+    } catch (err) {
+        console.error('Error deleting from Dexie:', err);
+        return false;
+    }
 }
 
 // --- Weekly Plan ---
@@ -234,6 +242,7 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
         if (fallback) {
             const parsed = JSON.parse(fallback);
             await db.plans.put({ id: 'weekly-plan', plan_data: parsed });
+            localStorage.removeItem('que-me-pongo:weekly-plan');
             return parsed;
         }
         return {};
@@ -300,6 +309,7 @@ export async function loadUserProfile(): Promise<UserProfile> {
         if (fallback) {
             const parsed = JSON.parse(fallback);
             await db.profiles.put({ id: 'user-profile', profile_data: parsed });
+            localStorage.removeItem('que-me-pongo:user-profile');
             return parsed;
         }
         return {};
