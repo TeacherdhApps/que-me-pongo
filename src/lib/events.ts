@@ -1,12 +1,11 @@
-
 type Callback = () => void;
 const listeners: Set<Callback> = new Set();
 const authListeners: Set<Callback> = new Set();
 
 export const wardrobeEvents = {
-    subscribe(callback: Callback) {
+    subscribe(callback: Callback): () => void {
         listeners.add(callback);
-        return () => listeners.delete(callback);
+        return () => { listeners.delete(callback); };
     },
     emit() {
         listeners.forEach(callback => callback());
@@ -14,9 +13,9 @@ export const wardrobeEvents = {
 };
 
 export const authEvents = {
-    subscribe(callback: Callback) {
+    subscribe(callback: Callback): () => void {
         authListeners.add(callback);
-        return () => authListeners.delete(callback);
+        return () => { authListeners.delete(callback); };
     },
     emit() {
         authListeners.forEach(callback => callback());
