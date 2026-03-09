@@ -1,4 +1,3 @@
-
 import { db } from './db';
 import { supabase } from './supabase';
 import type { ClothingItem, WeeklyPlan, UserProfile } from '../types';
@@ -29,7 +28,7 @@ function base64ToFile(base64: string, filename: string): File {
     return new File([ab], filename, { type: mime });
 }
 
-import { resizeImage } from './imageResizer';
+import { resizeImage, generateThumbnail } from './imageResizer';
 
 export async function uploadImage(base64Image: string, userId: string): Promise<string> {
     const optimizedBase64 = await resizeImage(base64Image, 1200, 1200, 0.7);
@@ -68,63 +67,84 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
     const userId = await getUserId();
 
     if (userId) {
-        await syncLocalDataToCloud(userId);
+        // Run sync in background, don't block load
+        syncLocalDataToCloud(userId).catch(console.error);
+
         const { data, error } = await supabase
             .from('wardrobe')
             .select('*')
             .order('created_at', { ascending: false });
 
         if (!error && data) {
+            // Merge with local items that haven't synced yet
+            const localItems = await db.wardrobe.toArray();
+            const unSynced = localItems.filter(i => i.id.startsWith('local-'));
+            
             await db.wardrobe.clear();
-            await db.wardrobe.bulkPut(data);
-            return data as ClothingItem[];
+            await db.wardrobe.bulkPut([...data, ...unSynced]);
+            return [...data, ...unSynced] as ClothingItem[];
         }
     }
     return await db.wardrobe.toArray();
 }
 
+/**
+ * Strategy: Save to Dexie instantly, then attempt cloud sync.
+ * This ensures the item never "disappears" even if internet is slow.
+ */
 export async function addClothingItem(item: Omit<ClothingItem, 'id'>): Promise<ClothingItem> {
     const userId = await getUserId();
-
-    if (userId) {
-        const { data, error } = await supabase
-            .from('wardrobe')
-            .insert([{ ...item, user_id: userId }])
-            .select()
-            .single();
-
-        if (error) throw error;
-        const newItem = data as ClothingItem;
-        await db.wardrobe.put(newItem);
-        return newItem;
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    
+    // Generate tiny placeholder if image is base64 (new upload)
+    let thumbnail = undefined;
+    if (item.image.startsWith('data:')) {
+        try {
+            thumbnail = await generateThumbnail(item.image);
+        } catch (e) {
+            console.error('Thumbnail generation failed', e);
+        }
     }
 
     const newItem: ClothingItem = {
         ...item,
-        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: localId,
+        thumbnail,
         created_at: new Date().toISOString()
     };
+
+    // 1. Save to local cache IMMEDIATELY
     await db.wardrobe.add(newItem);
+
+    // 2. If logged in, attempt background sync
+    if (userId) {
+        // We don't "await" this long process to keep UI snappy, 
+        // but we return the newItem so TanStack Query can track it.
+        syncLocalDataToCloud(userId).catch(console.error);
+    }
+
     return newItem;
 }
 
 export async function updateClothingItem(id: string, updates: Partial<ClothingItem>): Promise<void> {
     const userId = await getUserId();
+    await db.wardrobe.update(id, updates);
     if (userId && !id.startsWith('local-')) {
         await supabase.from('wardrobe').update(updates).eq('id', id).eq('user_id', userId);
     }
-    await db.wardrobe.update(id, updates);
 }
 
 export async function deleteClothingItem(id: string, imageUrl?: string): Promise<void> {
     const userId = await getUserId();
+    // Delete local cache instantly
+    await db.wardrobe.where('id').equals(id).delete();
+    await db.wardrobe.where('id').equals(Number(id) as any).delete();
+
+    // Background cloud delete
     if (userId && !id.startsWith('local-')) {
-        // We ignore error here to allow local deletion to proceed even if cloud item is already gone
         await supabase.from('wardrobe').delete().eq('id', id).eq('user_id', userId);
         if (imageUrl) await deleteImage(imageUrl);
     }
-    await db.wardrobe.where('id').equals(id).delete();
-    await db.wardrobe.where('id').equals(Number(id) as any).delete();
 }
 
 // --- Weekly Plan ---
@@ -145,10 +165,10 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
     const userId = await getUserId();
+    await db.plans.put({ id: 'weekly-plan', plan_data: plan });
     if (userId) {
         await supabase.from('plans').upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
     }
-    await db.plans.put({ id: 'weekly-plan', plan_data: plan });
 }
 
 // --- User Profile ---
@@ -176,6 +196,7 @@ export async function loadUserProfile(): Promise<UserProfile> {
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
     const userId = await getUserId();
+    await db.profiles.put({ id: 'user-profile', profile_data: profile });
     if (userId) {
         await supabase.from('profiles').upsert({
             user_id: userId,
@@ -187,7 +208,6 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
             is_pro: profile.isPro ?? false,
         }, { onConflict: 'user_id' });
     }
-    await db.profiles.put({ id: 'user-profile', profile_data: profile });
 }
 
 // --- Sync & Migration ---
@@ -195,15 +215,43 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
 export async function syncLocalDataToCloud(userId: string): Promise<void> {
     const localItems = await db.wardrobe.toArray();
     const itemsToMigrate = localItems.filter(i => i.id.startsWith('local-'));
-    if (itemsToMigrate.length > 0) {
-        const cleanItems = itemsToMigrate.map(({ id, ...rest }) => ({ ...rest, user_id: userId }));
-        const { error } = await supabase.from('wardrobe').insert(cleanItems);
-        if (!error) await db.wardrobe.bulkDelete(itemsToMigrate.map(i => i.id));
+    
+    for (const item of itemsToMigrate) {
+        const { id, ...rest } = item;
+        let image = rest.image;
+        
+        // If image is still base64, upload it first
+        if (image.startsWith('data:')) {
+            try {
+                image = await uploadImage(image, userId);
+            } catch (err) {
+                console.error('Failed to upload image during sync:', err);
+                continue; // Skip this item for now
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('wardrobe')
+            .insert([{ ...rest, image, thumbnail: item.thumbnail, user_id: userId }])
+            .select()
+            .single();
+
+        if (!error && data) {
+            // Remove local temp item and replace with cloud version in cache
+            await db.wardrobe.delete(id);
+            await db.wardrobe.put(data as ClothingItem);
+        }
     }
+
     const localPlan = await db.plans.get('weekly-plan');
-    if (localPlan) await supabase.from('plans').upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
+    if (localPlan) {
+        await supabase.from('plans').upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
+    }
+
     const localProfile = await db.profiles.get('user-profile');
-    if (localProfile) await saveUserProfile(localProfile.profile_data);
+    if (localProfile) {
+        await saveUserProfile(localProfile.profile_data);
+    }
 }
 
 // --- Clear / Export / Import ---
@@ -228,7 +276,7 @@ export async function clearAllData(): Promise<void> {
 
 export async function exportAllData(): Promise<string> {
     const data = {
-        version: 3,
+        version: 4,
         exportedAt: new Date().toISOString(),
         wardrobe: await loadWardrobe(),
         weeklyPlan: await loadWeeklyPlan(),

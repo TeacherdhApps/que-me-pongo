@@ -1,0 +1,13 @@
+{
+  "track_id": "storage-ux-improvements",
+  "title": "Storage UX Improvements",
+  "status": "active",
+  "milestones": [
+    { "id": "step-1", "title": "Optimistic Updates", "status": "in-progress" },
+    { "id": "step-2", "title": "Cloud Sync Indicators", "status": "todo" },
+    { "id": "step-3", "title": "Smart Offline Queueing", "status": "todo" },
+    { "id": "step-4", "title": "Storage Quota Dashboard", "status": "todo" },
+    { "id": "step-5", "title": "Bulk Management", "status": "todo" },
+    { "id": "step-6", "title": "Progressive Image Loading", "status": "todo" }
+  ]
+}

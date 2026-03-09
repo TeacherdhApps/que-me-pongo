@@ -14,6 +14,7 @@ export interface ClothingItem {
   category: Category;  // TOP | BOTTOM | SHOES | ACCESSORY
   color: string;       // e.g., "blanco", "azul marino"
   image: string;       // base64 data URL or file path
+  thumbnail?: string;  // tiny base64 placeholder for progressive loading
   tags: string[];      // e.g., ["formal", "verano", "casual"]
   created_at?: string;
   user_id?: string;

@@ -6,6 +6,7 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { StorageHealth } from './StorageHealth';
 
 export function SettingsView() {
     const queryClient = useQueryClient();
@@ -194,11 +195,8 @@ export function SettingsView() {
                     )}
                 </div>
 
-                <div className="mt-10 h-3 w-full bg-zinc-100 rounded-full overflow-hidden">
-                    <div
-                        className={`h-full transition-all duration-1000 ${profile.isPro ? 'bg-amber-500' : (wardrobe.length / 100 > 0.9 ? 'bg-red-500' : 'bg-black')}`}
-                        style={{ width: profile.isPro ? '100%' : `${Math.min((wardrobe.length / 100) * 100, 100)}%` }}
-                    ></div>
+                <div className="mt-10">
+                    <StorageHealth current={wardrobe.length} limit={100} isPro={profile.isPro ?? false} />
                 </div>
             </div>
 

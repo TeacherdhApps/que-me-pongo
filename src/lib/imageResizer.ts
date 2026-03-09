@@ -40,3 +40,10 @@ export async function resizeImage(base64Str: string, maxWidth = 800, maxHeight =
         img.onerror = (err) => reject(err);
     });
 }
+
+/**
+ * Generates a tiny base64 placeholder for progressive image loading.
+ */
+export async function generateThumbnail(base64Str: string): Promise<string> {
+    return resizeImage(base64Str, 20, 20, 0.3);
+}

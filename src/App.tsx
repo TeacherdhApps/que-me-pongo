@@ -5,6 +5,7 @@ import { WeeklyPlanner } from './components/WeeklyPlanner';
 import { MonthlyPlanner } from './components/MonthlyPlanner';
 import { SettingsView } from './components/SettingsView';
 import { AuthView } from './components/AuthView';
+import { SyncStatus } from './components/SyncStatus';
 import { useUserProfile } from './hooks/useUserProfile';
 import { supabase } from './lib/supabase';
 import type { WeatherData } from './types';
@@ -106,6 +107,7 @@ function App() {
             </div>
 
             <div className="flex items-center gap-3 sm:gap-6">
+              <SyncStatus />
               <div className="text-[9px] sm:text-[10px] font-bold bg-zinc-100 px-2 sm:px-3 py-1 rounded-full shadow-sm flex flex-col sm:flex-row items-center gap-0 sm:gap-2">
                 <span className="text-zinc-500 truncate max-w-[100px] sm:max-w-none">📍 {weather.city}</span>
                 <span className="whitespace-nowrap">{weather.temp}°C · {weather.condition}</span>
