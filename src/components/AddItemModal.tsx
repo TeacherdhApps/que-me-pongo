@@ -1,20 +1,19 @@
+
 import { useState, useRef, useCallback } from 'react';
 import { Categories, type Category, type ClothingItem } from '../types';
 import { resizeImage } from '../lib/imageResizer';
 import { uploadImage } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
-import { useWardrobe } from '../hooks/useWardrobe';
-import { useUserProfile } from '../hooks/useUserProfile';
 import { processBackgroundRemoval, blobToBase64 } from '../lib/backgroundRemoval';
 
 interface AddItemModalProps {
     onClose: () => void;
-    onAdd: (item: Omit<ClothingItem, 'id'>) => void;
+    onAdd: (item: Omit<ClothingItem, 'id'>) => Promise<ClothingItem>;
+    currentCount: number;
+    isPro: boolean;
 }
 
-export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
-    const { wardrobe } = useWardrobe();
-    const { profile } = useUserProfile();
+export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemModalProps) {
     const [name, setName] = useState('');
     const [category, setCategory] = useState<Category>(Categories.TOP);
     const [image, setImage] = useState<string>('');
@@ -26,7 +25,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
     const cameraRef = useRef<HTMLInputElement>(null);
 
     const ITEM_LIMIT = 100;
-    const isOverLimit = !profile.isPro && wardrobe.length >= ITEM_LIMIT;
+    const isOverLimit = !isPro && currentCount >= ITEM_LIMIT;
 
     const handleFile = async (file: File) => {
         if (isOverLimit) {
@@ -41,7 +40,6 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                 reader.readAsDataURL(file);
             });
 
-
             let processedImage = rawBase64;
 
             if (removeBG) {
@@ -51,13 +49,11 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                     processedImage = await blobToBase64(blob);
                 } catch (bgErr) {
                     console.error('BG removal failed, falling back to original:', bgErr);
-                    // Fallback to original image if BG removal fails
                 } finally {
                     setIsRemovingBackground(false);
                 }
             }
 
-            // Resize and compress to 800px max, 70% quality
             const compressed = await resizeImage(processedImage, 800, 800, 0.7);
             setImage(compressed);
         } catch (err) {
@@ -97,14 +93,12 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
         setIsUploading(true);
         try {
             let finalImage = image;
-
-            // If logged in, upload to Supabase Storage
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 finalImage = await uploadImage(image, user.id);
             }
 
-            onAdd({
+            await onAdd({
                 name,
                 category,
                 image: finalImage,
@@ -113,12 +107,8 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
             });
             onClose();
         } catch (err: any) {
-            if (err.name === 'QuotaExceededError') {
-                alert('El almacenamiento local está lleno. No se puede guardar la prenda.');
-            } else {
-                console.error('Error uploading image:', err);
-                alert('Error al subir la imagen. Intenta de nuevo.');
-            }
+            console.error('Submit error:', err);
+            alert('Error al guardar la prenda. Por favor intenta de nuevo.');
         } finally {
             setIsUploading(false);
         }
@@ -185,7 +175,6 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                     )}
                 </div>
 
-                {/* Background Removal Toggle */}
                 <div className="flex items-center justify-between px-6 py-4 bg-zinc-50 rounded-3xl border border-zinc-100">
                     <div className="flex items-center gap-3">
                         <i className="fas fa-magic text-zinc-400 text-[10px]"></i>

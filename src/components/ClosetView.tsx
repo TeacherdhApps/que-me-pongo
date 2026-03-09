@@ -1,6 +1,6 @@
-
 import { useState, memo } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { AddItemModal } from './AddItemModal';
 import { Categories } from '../types';
 import type { Category, ClothingItem } from '../types';
@@ -61,6 +61,7 @@ ClothingCard.displayName = 'ClothingCard';
 
 export function ClosetView() {
     const { wardrobe, isLoading, add, remove } = useWardrobe();
+    const { profile } = useUserProfile();
     const [showModal, setShowModal] = useState(false);
     const [openSection, setOpenSection] = useState<Category | null>(null);
 
@@ -145,6 +146,8 @@ export function ClosetView() {
                 <AddItemModal
                     onClose={() => setShowModal(false)}
                     onAdd={add}
+                    currentCount={wardrobe.length}
+                    isPro={profile.isPro ?? false}
                 />
             )}
         </div>

@@ -1,0 +1,29 @@
+{
+  "track_id": "storage-rework",
+  "title": "Rewrite Storage Logic",
+  "description": "Total rewrite of the storage layer to fix data inconsistency and disappearing items.",
+  "status": "active",
+  "owner": "Gemini CLI",
+  "milestones": [
+    {
+      "id": "refactor-storage",
+      "title": "Core Storage Refactor",
+      "status": "in-progress"
+    },
+    {
+      "id": "optimize-hooks",
+      "title": "Hook Optimization",
+      "status": "todo"
+    },
+    {
+      "id": "ui-stability",
+      "title": "UI Feedback & Stability",
+      "status": "todo"
+    },
+    {
+      "id": "verification",
+      "title": "Verification & Deployment",
+      "status": "todo"
+    }
+  ]
+}

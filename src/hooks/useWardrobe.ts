@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { loadWardrobe, addClothingItem, updateClothingItem, deleteClothingItem, loadWeeklyPlan, saveWeeklyPlan } from '../lib/wardrobeStorage';
 import type { ClothingItem, Category, WeeklyPlan, DailyOutfit } from '../types';
@@ -8,11 +7,15 @@ export function useWardrobe() {
     const [wardrobe, setWardrobe] = useState<ClothingItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const refresh = useCallback(() => {
-        loadWardrobe().then(data => {
+    const refresh = useCallback(async () => {
+        try {
+            const data = await loadWardrobe();
             setWardrobe(data);
+        } catch (err) {
+            console.error('Refresh wardrobe error:', err);
+        } finally {
             setIsLoading(false);
-        });
+        }
     }, []);
 
     useEffect(() => {
@@ -26,40 +29,39 @@ export function useWardrobe() {
     }, [refresh]);
 
     const add = useCallback(async (item: Omit<ClothingItem, 'id'>) => {
-        const newItem = await addClothingItem(item);
-        setWardrobe(prev => [newItem, ...prev]);
-        wardrobeEvents.emit(); // Sync other hooks
-        return newItem;
+        try {
+            const newItem = await addClothingItem(item);
+            // After successful cloud/local add, we just emit to all hooks to refresh from DB
+            // This ensures every instance of useWardrobe has the exact same state as the DB
+            wardrobeEvents.emit();
+            return newItem;
+        } catch (error) {
+            console.error('Failed to add item:', error);
+            throw error;
+        }
     }, []);
 
     const update = useCallback(async (id: string, updates: Partial<ClothingItem>) => {
-        await updateClothingItem(id, updates);
-        setWardrobe(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
-        wardrobeEvents.emit(); // Sync other hooks
+        try {
+            await updateClothingItem(id, updates);
+            wardrobeEvents.emit();
+        } catch (error) {
+            console.error('Failed to update item:', error);
+            throw error;
+        }
     }, []);
 
     const remove = useCallback(async (id: string, imageUrl?: string) => {
-        // Save current wardrobe for potential rollback
+        // Optimistic update: remove item from local state immediately
         const previousWardrobe = [...wardrobe];
-
-        // Optimistic update: remove item from state immediately
         setWardrobe(prev => prev.filter(item => item.id !== id));
-        wardrobeEvents.emit(); // Sync other hooks
 
         try {
-            const success = await deleteClothingItem(id, imageUrl);
-            if (!success) {
-                // If the item wasn't found or couldn't be deleted, rollback
-                console.warn('Deletion failed on server (item not found), rolling back state.');
-                setWardrobe(previousWardrobe);
-                wardrobeEvents.emit(); // Sync rollback
-            }
+            await deleteClothingItem(id, imageUrl);
+            wardrobeEvents.emit(); // Sync everyone else
         } catch (error) {
-            // Error occurred during deletion, rollback
             console.error('Failed to delete item, rolling back state:', error);
             setWardrobe(previousWardrobe);
-            wardrobeEvents.emit(); // Sync rollback
-            // Re-throw so the UI can catch and show an alert if needed
             throw error;
         }
     }, [wardrobe]);
@@ -68,7 +70,7 @@ export function useWardrobe() {
         return wardrobe.filter(item => item.category === category);
     }, [wardrobe]);
 
-    return { wardrobe, isLoading, add, update, remove, filterByCategory };
+    return { wardrobe, isLoading, add, update, remove, filterByCategory, refresh };
 }
 
 
@@ -76,25 +78,33 @@ export function useWeeklyPlan() {
     const [plan, setPlan] = useState<WeeklyPlan>({});
     const [isLoading, setIsLoading] = useState(true);
 
-    const refresh = useCallback(() => {
-        loadWeeklyPlan().then(data => {
+    const refresh = useCallback(async () => {
+        try {
+            const data = await loadWeeklyPlan();
             setPlan(data);
+        } catch (err) {
+            console.error('Refresh plan error:', err);
+        } finally {
             setIsLoading(false);
-        });
+        }
     }, []);
 
     useEffect(() => {
         refresh();
-        return authEvents.subscribe(refresh);
+        const unsub = authEvents.subscribe(refresh);
+        return () => unsub();
     }, [refresh]);
 
     const updateDay = useCallback(async (day: string, outfit: DailyOutfit) => {
-        setPlan(prev => {
-            const next = { ...prev, [day]: outfit };
-            saveWeeklyPlan(next);
-            return next;
-        });
-    }, []);
+        try {
+            // Update state immediately for UX
+            setPlan(prev => ({ ...prev, [day]: outfit }));
+            // Persist
+            await saveWeeklyPlan({ ...plan, [day]: outfit });
+        } catch (error) {
+            console.error('Failed to save plan:', error);
+        }
+    }, [plan]);
 
-    return { plan, isLoading, updateDay };
+    return { plan, isLoading, updateDay, refresh };
 }

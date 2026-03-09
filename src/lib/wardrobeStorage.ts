@@ -1,4 +1,3 @@
-
 import { db } from './db';
 import { supabase } from './supabase';
 import type { ClothingItem, WeeklyPlan, UserProfile } from '../types';
@@ -7,9 +6,16 @@ const IMAGE_BUCKET = 'wardrobe-images';
 
 // --- Helpers ---
 
+/**
+ * Returns the current user ID or null if not logged in.
+ * Uses getSession for faster check then getUser for security.
+ */
 async function getUserId() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) return session.user.id;
+    
     const { data: { user } } = await supabase.auth.getUser();
-    return user?.id;
+    return user?.id || null;
 }
 
 // --- Image Storage ---
@@ -62,10 +68,9 @@ export async function uploadImage(base64Image: string, userId: string): Promise<
  */
 export async function deleteImage(imageUrl: string): Promise<void> {
     try {
-        // Extract the path after /object/public/wardrobe-images/
         const marker = `/object/public/${IMAGE_BUCKET}/`;
         const idx = imageUrl.indexOf(marker);
-        if (idx === -1) return; // Not a Supabase Storage URL, skip
+        if (idx === -1) return;
         const path = imageUrl.substring(idx + marker.length);
         await supabase.storage.from(IMAGE_BUCKET).remove([path]);
     } catch (err) {
@@ -75,117 +80,72 @@ export async function deleteImage(imageUrl: string): Promise<void> {
 
 // --- Wardrobe CRUD ---
 
+/**
+ * Loads the wardrobe. 
+ * If logged in: Syncs cloud -> local cache and returns cloud data.
+ * If offline: Returns local cache.
+ */
 export async function loadWardrobe(): Promise<ClothingItem[]> {
     const userId = await getUserId();
 
     if (userId) {
-        // --- Sync Logic: Move local items to Supabase if they exist ---
-        const localItems = await db.wardrobe.toArray();
-        if (localItems.length > 0) {
-            console.log(`Syncing ${localItems.length} local items to Supabase for user ${userId}`);
-            const itemsToSync = localItems.map(item => {
-                const { id, ...rest } = item;
-                // If it's a local ID, let Supabase generate a new one
-                // Otherwise, keep the ID if it's already a UUID (from a previous export/import)
-                if (id.startsWith('local-')) {
-                    return { ...rest, user_id: userId };
-                }
-                return { ...item, user_id: userId };
-            });
+        // 1. First, check if there's anything local to sync TO cloud
+        await syncLocalDataToCloud(userId);
 
-            const { error: syncError } = await supabase
-                .from('wardrobe')
-                .upsert(itemsToSync, { onConflict: 'id' }); // Use upsert to avoid duplicates
-
-            if (!syncError) {
-                // Clear local items after successful sync
-                await db.wardrobe.clear();
-                console.log('Local wardrobe synced and cleared.');
-            } else {
-                console.error('Error syncing wardrobe:', syncError);
-            }
-        }
-
+        // 2. Fetch from Cloud
         const { data, error } = await supabase
             .from('wardrobe')
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error loading from Supabase:', error);
-            // Fallback to cache if offline
-            return await db.wardrobe.toArray();
-        }
-
-        // Update local cache to match exactly what is in Supabase
-        await db.wardrobe.clear();
-        if (data && data.length > 0) {
+        if (!error && data) {
+            // 3. Update Local Cache strictly to match Cloud
+            await db.wardrobe.clear();
             await db.wardrobe.bulkPut(data);
+            return data as ClothingItem[];
         }
         
-        return data as ClothingItem[];
+        if (error) console.error('Supabase load error:', error);
     }
 
-    // Dexie Fallback
-    try {
-        const migrated = await db.appSettings.get('wardrobe-migrated');
-        const localItems = await db.wardrobe.toArray();
-
-        // If already migrated and empty, it's valid empty state
-        if (migrated && localItems.length === 0) return [];
-        // If there are items, return them
-        if (localItems.length > 0) return localItems;
-
-        // Migrate from localStorage if needed
-        let raw = localStorage.getItem('que-me-pongo:wardrobe');
-        if (!raw) raw = localStorage.getItem('cc_items');
-
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            const items = Array.isArray(parsed) ? parsed : [];
-            await db.wardrobe.bulkPut(items);
-            await db.appSettings.put({ id: 'wardrobe-migrated', value: true });
-            localStorage.removeItem('que-me-pongo:wardrobe');
-            localStorage.removeItem('cc_items');
-            return items;
-        }
-
-        // Mark as migrated even if nothing was in localStorage
-        await db.appSettings.put({ id: 'wardrobe-migrated', value: true });
-        return [];
-    } catch {
-        return [];
-    }
+    // Fallback to local cache (Dexie)
+    return await db.wardrobe.toArray();
 }
 
+/**
+ * Adds a new item.
+ * Architecture: Update Cloud, then Update Local Cache.
+ */
 export async function addClothingItem(item: Omit<ClothingItem, 'id'>): Promise<ClothingItem> {
     const userId = await getUserId();
 
     if (userId) {
+        // Cloud First
         const { data, error } = await supabase
             .from('wardrobe')
             .insert([{ ...item, user_id: userId }])
             .select()
             .single();
 
-        if (error) throw error;
-        return data as ClothingItem;
-    }
-
-    // Dexie Storage
-    const newItem: ClothingItem = {
-        ...item,
-        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        created_at: new Date().toISOString()
-    };
-    try {
-        await db.wardrobe.add(newItem);
-    } catch (error: any) {
-        if (error.name === 'QuotaExceededError') {
+        if (error) {
+            console.error('Error adding to Supabase:', error);
             throw error;
         }
-        throw error;
+
+        // Sync to local cache immediately
+        const newItem = data as ClothingItem;
+        await db.wardrobe.put(newItem);
+        return newItem;
     }
+
+    // Offline mode: Dexie Only
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newItem: ClothingItem = {
+        ...item,
+        id: localId,
+        created_at: new Date().toISOString()
+    };
+    await db.wardrobe.add(newItem);
     return newItem;
 }
 
@@ -196,66 +156,40 @@ export async function updateClothingItem(id: string, updates: Partial<ClothingIt
         const { error } = await supabase
             .from('wardrobe')
             .update(updates)
-            .eq('id', id);
+            .eq('id', id)
+            .eq('user_id', userId);
+        
         if (error) throw error;
-        return;
     }
 
-    // Dexie Storage
-    try {
-        await db.wardrobe.update(id, updates);
-        await db.wardrobe.update(Number(id) as any, updates); // Fallback for numeric IDs from legacy localStorage
-    } catch (error: any) {
-        if (error?.name === 'QuotaExceededError') {
-            throw error;
-        }
-        console.error('Dexie update error:', error);
-    }
+    // Always update local cache
+    await db.wardrobe.update(id, updates);
 }
 
 export async function deleteClothingItem(id: string, imageUrl?: string): Promise<boolean> {
     const userId = await getUserId();
+    let deletedSuccessfully = false;
 
     if (userId && !id.startsWith('local-')) {
-        console.log(`Attempting to delete item ${id} for user ${userId}`);
-
-        // Delete from DB first. We use .eq('user_id', userId) as a safety measure
-        // even if RLS is enabled, to ensure we only affect the user's own data.
-        const { error, count } = await supabase
+        const { error } = await supabase
             .from('wardrobe')
-            .delete({ count: 'exact' })
+            .delete()
             .eq('id', id)
             .eq('user_id', userId);
 
-        if (error) {
-            console.error('Error deleting from Supabase:', error);
-            throw error;
+        if (!error) {
+            deletedSuccessfully = true;
+            if (imageUrl) await deleteImage(imageUrl);
+        } else {
+            console.error('Supabase delete error:', error);
         }
-
-        // If count is 0, it means no rows were deleted (maybe already gone or wrong user)
-        if (count === 0) {
-            console.warn(`No item found to delete with id ${id} for user ${userId}. Continuing as successful.`);
-        }
-
-        // Always attempt to delete the image if provided
-        if (imageUrl) {
-            await deleteImage(imageUrl);
-        }
-
-        return true;
     }
 
-    // Dexie Storage
-    console.log(`Deleting local item ${id}`);
-    try {
-        // Attempt deletion of both string and numeric IDs
-        const result1 = await db.wardrobe.where('id').equals(id).delete();
-        const result2 = await db.wardrobe.where('id').equals(Number(id) as any).delete();
-        return result1 > 0 || result2 > 0;
-    } catch (err) {
-        console.error('Error deleting from Dexie:', err);
-        return false;
-    }
+    // Always attempt local deletion regardless of cloud result (to keep UI snappy)
+    const del1 = await db.wardrobe.where('id').equals(id).delete();
+    const del2 = await db.wardrobe.where('id').equals(Number(id) as any).delete();
+    
+    return deletedSuccessfully || del1 > 0 || del2 > 0;
 }
 
 // --- Weekly Plan ---
@@ -264,77 +198,33 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
     const userId = await getUserId();
 
     if (userId) {
-        // --- Sync Logic: Move local plan to Supabase if it exists ---
-        const localPlan = await db.plans.get('weekly-plan');
-        if (localPlan) {
-            console.log(`Syncing local plan to Supabase for user ${userId}`);
-            const { error: syncError } = await supabase
-                .from('plans')
-                .upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
-
-            if (!syncError) {
-                await db.plans.delete('weekly-plan');
-                console.log('Local plan synced and cleared.');
-            } else {
-                console.error('Error syncing plan:', syncError);
-            }
-        }
-
         const { data, error } = await supabase
             .from('plans')
             .select('plan_data')
             .eq('user_id', userId)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-            console.error('Error loading plan from Supabase:', error);
+        if (!error && data) {
+            const plan = data.plan_data || {};
+            await db.plans.put({ id: 'weekly-plan', plan_data: plan });
+            return plan;
         }
-        return data?.plan_data || {};
     }
 
-    // Dexie Fallback
-    try {
-        const migrated = await db.appSettings.get('plans-migrated');
-        let record = await db.plans.get('weekly-plan');
-
-        if (migrated && !record) return {};
-        if (record) return record.plan_data;
-
-        // Migrate from localStorage
-        const fallback = localStorage.getItem('que-me-pongo:weekly-plan');
-        if (fallback) {
-            const parsed = JSON.parse(fallback);
-            await db.plans.put({ id: 'weekly-plan', plan_data: parsed });
-            await db.appSettings.put({ id: 'plans-migrated', value: true });
-            localStorage.removeItem('que-me-pongo:weekly-plan');
-            return parsed;
-        }
-        await db.appSettings.put({ id: 'plans-migrated', value: true });
-        return {};
-    } catch {
-        return {};
-    }
+    const record = await db.plans.get('weekly-plan');
+    return record?.plan_data || {};
 }
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
     const userId = await getUserId();
 
     if (userId) {
-        const { error } = await supabase
+        await supabase
             .from('plans')
             .upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
-        if (error) throw error;
-        return;
     }
 
-    try {
-        await db.plans.put({ id: 'weekly-plan', plan_data: plan });
-    } catch (error: any) {
-        if (error.name === 'QuotaExceededError') {
-            throw error;
-        }
-        throw error;
-    }
+    await db.plans.put({ id: 'weekly-plan', plan_data: plan });
 }
 
 // --- User Profile ---
@@ -343,41 +233,14 @@ export async function loadUserProfile(): Promise<UserProfile> {
     const userId = await getUserId();
 
     if (userId) {
-        // --- Sync Logic: Move local profile to Supabase if it exists ---
-        const localProfile = await db.profiles.get('user-profile');
-        if (localProfile) {
-            console.log(`Syncing local profile to Supabase for user ${userId}`);
-            const { error: syncError } = await supabase
-                .from('profiles')
-                .upsert({
-                    user_id: userId,
-                    name: localProfile.profile_data.name || null,
-                    sex: localProfile.profile_data.sex || null,
-                    age: localProfile.profile_data.age || null,
-                    weight: localProfile.profile_data.weight || null,
-                    height: localProfile.profile_data.height || null,
-                    is_pro: localProfile.profile_data.isPro ?? false,
-                }, { onConflict: 'user_id' });
-
-            if (!syncError) {
-                await db.profiles.delete('user-profile');
-                console.log('Local profile synced and cleared.');
-            } else {
-                console.error('Error syncing profile:', syncError);
-            }
-        }
-
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('user_id', userId)
             .single();
 
-        if (error && error.code !== 'PGRST116') {
-            console.error('Error loading profile from Supabase:', error);
-        }
-        if (data) {
-            return {
+        if (!error && data) {
+            const profile: UserProfile = {
                 name: data.name ?? undefined,
                 sex: data.sex ?? undefined,
                 age: data.age ?? undefined,
@@ -385,33 +248,20 @@ export async function loadUserProfile(): Promise<UserProfile> {
                 height: data.height ?? undefined,
                 isPro: data.is_pro ?? false,
             };
+            await db.profiles.put({ id: 'user-profile', profile_data: profile });
+            return profile;
         }
     }
 
-    // Dexie Fallback
-    try {
-        let record = await db.profiles.get('user-profile');
-        if (record) return record.profile_data;
-
-        // Migrate from localStorage
-        const fallback = localStorage.getItem('que-me-pongo:user-profile');
-        if (fallback) {
-            const parsed = JSON.parse(fallback);
-            await db.profiles.put({ id: 'user-profile', profile_data: parsed });
-            localStorage.removeItem('que-me-pongo:user-profile');
-            return parsed;
-        }
-        return {};
-    } catch {
-        return {};
-    }
+    const record = await db.profiles.get('user-profile');
+    return record?.profile_data || {};
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
     const userId = await getUserId();
 
     if (userId) {
-        const { error } = await supabase
+        await supabase
             .from('profiles')
             .upsert({
                 user_id: userId,
@@ -422,60 +272,72 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
                 height: profile.height || null,
                 is_pro: profile.isPro ?? false,
             }, { onConflict: 'user_id' });
-        if (error) {
-            console.error('Error saving profile to Supabase:', error);
-        }
-        return;
     }
 
-    try {
-        await db.profiles.put({ id: 'user-profile', profile_data: profile });
-    } catch (error: any) {
-        if (error.name === 'QuotaExceededError') {
-            throw error;
+    await db.profiles.put({ id: 'user-profile', profile_data: profile });
+}
+
+// --- Sync & Migration ---
+
+/**
+ * Migration helper to move any local-only data to Supabase when a user logs in.
+ */
+export async function syncLocalDataToCloud(userId: string): Promise<void> {
+    // 1. Sync Wardrobe
+    const localItems = await db.wardrobe.toArray();
+    const itemsToMigrate = localItems.filter(i => i.id.startsWith('local-'));
+    
+    if (itemsToMigrate.length > 0) {
+        console.log(`Migrating ${itemsToMigrate.length} items to Supabase...`);
+        const cleanItems = itemsToMigrate.map(({ id, ...rest }) => ({ ...rest, user_id: userId }));
+        const { error } = await supabase.from('wardrobe').insert(cleanItems);
+        if (!error) {
+            // After successful migration, local cache will be overwritten by cloud data in loadWardrobe
+            console.log('Migration successful.');
         }
-        throw error;
+    }
+
+    // 2. Sync Plan
+    const localPlan = await db.plans.get('weekly-plan');
+    if (localPlan) {
+        await supabase.from('plans').upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
+    }
+
+    // 3. Sync Profile
+    const localProfile = await db.profiles.get('user-profile');
+    if (localProfile) {
+        await saveUserProfile(localProfile.profile_data);
     }
 }
 
-// --- Export / Import / Clear ---
+// --- Clear / Export / Import ---
 
 export async function clearAllData(): Promise<void> {
     const userId = await getUserId();
     
-    // 1. Clear local Dexie DB
     await db.wardrobe.clear();
     await db.plans.clear();
     await db.profiles.clear();
     await db.appSettings.clear();
     
-    // 2. Clear Supabase if user is logged in
     if (userId) {
-        // We delete wardrobe items first
         const { data: items } = await supabase.from('wardrobe').select('image').eq('user_id', userId);
-        
-        // Delete images from storage
         if (items) {
             for (const item of items) {
                 if (item.image) await deleteImage(item.image);
             }
         }
-        
         await supabase.from('wardrobe').delete().eq('user_id', userId);
         await supabase.from('plans').delete().eq('user_id', userId);
         await supabase.from('profiles').delete().eq('user_id', userId);
     }
     
-    // 3. Clear localStorage (legacy)
-    localStorage.removeItem('que-me-pongo:wardrobe');
-    localStorage.removeItem('que-me-pongo:weekly-plan');
-    localStorage.removeItem('que-me-pongo:user-profile');
-    localStorage.removeItem('cc_items');
+    localStorage.clear(); // Nuclear option
 }
 
 export async function exportAllData(): Promise<string> {
     const data = {
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         wardrobe: await loadWardrobe(),
         weeklyPlan: await loadWeeklyPlan(),
@@ -489,32 +351,21 @@ export async function importAllData(jsonString: string): Promise<void> {
     const userId = await getUserId();
 
     if (userId) {
-        // Import to Supabase
         if (data.wardrobe) {
             const wardrobeToImport = [];
             for (const item of data.wardrobe) {
                 const { id, ...rest } = item;
                 let image = rest.image;
-                // Upload base64 images to Storage
                 if (image && image.startsWith('data:')) {
-                    try {
-                        image = await uploadImage(image, userId);
-                    } catch (err) {
-                        console.error('Error uploading image during import:', err);
-                    }
+                    try { image = await uploadImage(image, userId); } catch (err) { console.error(err); }
                 }
                 wardrobeToImport.push({ ...rest, image, user_id: userId });
             }
             await supabase.from('wardrobe').insert(wardrobeToImport);
         }
-        if (data.weeklyPlan) {
-            await saveWeeklyPlan(data.weeklyPlan);
-        }
-        if (data.userProfile) {
-            await saveUserProfile(data.userProfile);
-        }
+        if (data.weeklyPlan) await saveWeeklyPlan(data.weeklyPlan);
+        if (data.userProfile) await saveUserProfile(data.userProfile);
     } else {
-        // Import to Dexie
         if (data.wardrobe) await db.wardrobe.bulkPut(data.wardrobe);
         if (data.weeklyPlan) await db.plans.put({ id: 'weekly-plan', plan_data: data.weeklyPlan });
         if (data.userProfile) await db.profiles.put({ id: 'user-profile', profile_data: data.userProfile });
