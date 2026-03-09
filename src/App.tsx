@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ClosetView } from './components/ClosetView';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
 import { MonthlyPlanner } from './components/MonthlyPlanner';
@@ -7,7 +7,6 @@ import { SettingsView } from './components/SettingsView';
 import { AuthView } from './components/AuthView';
 import { useUserProfile } from './hooks/useUserProfile';
 import { supabase } from './lib/supabase';
-import { authEvents } from './lib/events';
 import type { WeatherData } from './types';
 
 // Map WMO weather codes to Spanish descriptions
@@ -25,6 +24,7 @@ function wmoCodeToCondition(code: number): string {
 }
 
 function App() {
+  const queryClient = useQueryClient();
   const { profile } = useUserProfile();
   const [session, setSession] = useState<any>(null);
   const [view, setView] = useState<'closet' | 'planner' | 'settings' | 'auth'>('closet');
@@ -38,40 +38,33 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      authEvents.emit();
+      if (session) queryClient.invalidateQueries();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      authEvents.emit();
+      queryClient.invalidateQueries();
       if (session) setView('closet');
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
-        // Fetch weather from Open-Meteo (free, no API key)
         const weatherRes = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`
         );
         const weatherData = await weatherRes.json();
-
         const temp = Math.round(weatherData.current.temperature_2m);
         const condition = wmoCodeToCondition(weatherData.current.weather_code);
 
-        // Reverse geocode for city name via Nominatim (free, no API key)
         const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=es`
         );
         const geoData = await geoRes.json();
-        const city = geoData.address?.city
-          || geoData.address?.town
-          || geoData.address?.village
-          || geoData.address?.state
-          || 'Tu ubicación';
+        const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || geoData.address?.state || 'Tu ubicación';
 
         setWeather({ temp, condition, city });
       } catch (err) {
@@ -82,30 +75,25 @@ function App() {
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          fetchWeather(pos.coords.latitude, pos.coords.longitude);
-        },
+        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
         (err) => {
           console.error('Geolocation error:', err);
           setWeather({ temp: 0, condition: 'Sin ubicación', city: 'Permiso denegado' });
         }
       );
-    } else {
-      console.warn('Geolocation not supported by this browser.');
     }
   }, []);
 
   const logout = async () => {
     await supabase.auth.signOut();
+    queryClient.clear();
     setView('auth');
   };
 
   return (
     <div className="min-h-screen pb-24">
-      {/* Header */}
       <header className="glass-nav sticky top-0 z-50 px-4 sm:px-6 py-4 sm:py-6 border-b border-zinc-100">
         <div className="max-w-6xl mx-auto">
-          {/* Top row: Logo + Weather + Logout */}
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
@@ -118,7 +106,6 @@ function App() {
             </div>
 
             <div className="flex items-center gap-3 sm:gap-6">
-              {/* Weather pill - stacks on small screens */}
               <div className="text-[9px] sm:text-[10px] font-bold bg-zinc-100 px-2 sm:px-3 py-1 rounded-full shadow-sm flex flex-col sm:flex-row items-center gap-0 sm:gap-2">
                 <span className="text-zinc-500 truncate max-w-[100px] sm:max-w-none">📍 {weather.city}</span>
                 <span className="whitespace-nowrap">{weather.temp}°C · {weather.condition}</span>
@@ -135,20 +122,16 @@ function App() {
             </div>
           </div>
 
-          {/* Desktop nav - hidden on mobile */}
           {session && (
             <nav className="hidden sm:flex gap-8 mt-4">
               {(['closet', 'planner', 'settings'] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => setView(t)}
-                  className={`text-[10px] font-bold uppercase tracking-widest transition-opacity relative py-1 ${view === t ? 'opacity-100' : 'opacity-30 hover:opacity-100'
-                    }`}
+                  className={`text-[10px] font-bold uppercase tracking-widest transition-opacity relative py-1 ${view === t ? 'opacity-100' : 'opacity-30 hover:opacity-100'}`}
                 >
                   {t === 'closet' ? 'Armario' : t === 'planner' ? 'Plan' : 'Ajustes'}
-                  {view === t && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-black animate-fade"></span>
-                  )}
+                  {view === t && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-black animate-fade"></span>}
                 </button>
               ))}
             </nav>
@@ -156,7 +139,6 @@ function App() {
         </div>
       </header>
 
-      {/* Mobile bottom nav - visible only on small screens */}
       {session && (
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-zinc-200 px-2 py-2 safe-area-bottom">
           <div className="flex justify-around items-center">
@@ -168,10 +150,7 @@ function App() {
               <button
                 key={t.key}
                 onClick={() => setView(t.key)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all ${view === t.key
-                  ? 'bg-black text-white shadow-lg scale-105'
-                  : 'text-zinc-400 hover:text-black'
-                  }`}
+                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all ${view === t.key ? 'bg-black text-white shadow-lg scale-105' : 'text-zinc-400 hover:text-black'}`}
               >
                 <i className={`fas ${t.icon} text-sm`}></i>
                 <span className="text-[8px] font-black uppercase tracking-widest">{t.label}</span>
@@ -189,15 +168,13 @@ function App() {
             {view !== 'settings' && (
               <div className="mb-8 animate-fade">
                 <h2 className="text-xl font-black uppercase tracking-widest text-zinc-800">
-                  ¡Buen día! {profile.name && <span className="text-zinc-400">{profile.name}</span>}
+                  ¡Buen día! {profile?.name && <span className="text-zinc-400">{profile.name}</span>}
                 </h2>
               </div>
             )}
             {view === 'closet' && <ClosetView />}
             {view === 'planner' && (
-              planSubView === 'week'
-                ? <WeeklyPlanner onViewChange={setPlanSubView} />
-                : <MonthlyPlanner onViewChange={setPlanSubView} />
+              planSubView === 'week' ? <WeeklyPlanner onViewChange={setPlanSubView} /> : <MonthlyPlanner onViewChange={setPlanSubView} />
             )}
             {view === 'settings' && <SettingsView />}
           </>

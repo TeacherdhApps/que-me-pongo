@@ -5,8 +5,10 @@ import { useWardrobe } from '../hooks/useWardrobe';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function SettingsView() {
+    const queryClient = useQueryClient();
     const { profile, update } = useUserProfile();
     const { wardrobe } = useWardrobe();
     const { isInstallable, installApp } = usePWAInstall();
@@ -17,6 +19,7 @@ export function SettingsView() {
         if (window.confirm('⚠️ ¿Estás COMPLETAMENTE seguro? Esto borrará todas tus prendas, planes y perfil permanentemente de la nube y este dispositivo.')) {
             try {
                 await clearAllData();
+                queryClient.clear();
                 alert('Armario reiniciado correctamente. La página se recargará.');
                 window.location.reload();
             } catch (err) {

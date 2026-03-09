@@ -3,6 +3,7 @@ import { vi, describe, it, beforeEach } from 'vitest';
 import { AddItemModal } from '../components/AddItemModal';
 import * as wardrobeHooks from '../hooks/useWardrobe';
 import * as userHooks from '../hooks/useUserProfile';
+import { wrapper } from './setup';
 
 // Mock hooks
 vi.mock('../hooks/useWardrobe');
@@ -30,7 +31,7 @@ describe('AddItemModal - Pro limits', () => {
             onAdd={vi.fn()} 
             currentCount={100}
             isPro={false}
-        />);
+        />, { wrapper });
 
         const nameInput = screen.getByPlaceholderText(/Ej. Camisa Oxford/i);
         fireEvent.change(nameInput, { target: { value: 'Test Shirt' } });
@@ -50,6 +51,6 @@ describe('AddItemModal - Pro limits', () => {
             onAdd={vi.fn()} 
             currentCount={101}
             isPro={true}
-        />);
+        />, { wrapper });
     });
 });

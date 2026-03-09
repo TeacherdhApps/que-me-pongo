@@ -1,24 +1,28 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { loadUserProfile, saveUserProfile } from '../lib/wardrobeStorage';
 import type { UserProfile } from '../types';
 
 export function useUserProfile() {
-    const [profile, setProfile] = useState<UserProfile>({});
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        loadUserProfile().then(data => {
-            setProfile(data);
-            setIsLoading(false);
-        });
-    }, []);
+    const { data: profile = {}, isLoading } = useQuery({
+        queryKey: ['user-profile'],
+        queryFn: loadUserProfile,
+    });
 
-    const update = useCallback(async (updates: Partial<UserProfile>) => {
-        const next = { ...profile, ...updates };
-        setProfile(next);
-        await saveUserProfile(next);
-    }, [profile]);
+    const updateMutation = useMutation({
+        mutationFn: (updates: Partial<UserProfile>) => {
+            const next = { ...profile, ...updates };
+            return saveUserProfile(next);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+        },
+    });
 
-    return { profile, isLoading, update };
+    return { 
+        profile, 
+        isLoading, 
+        update: updateMutation.mutateAsync 
+    };
 }

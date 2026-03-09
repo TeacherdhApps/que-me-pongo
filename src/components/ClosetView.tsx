@@ -1,3 +1,4 @@
+
 import { useState, memo } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -41,6 +42,7 @@ const ClothingCard = memo(({ item, onRemove }: { item: ClothingItem; onRemove: (
                             try {
                                 await onRemove(item.id, item.image);
                             } catch (err) {
+                                console.error('Delete error:', err);
                                 alert('No se pudo eliminar la prenda. Por favor, intenta de nuevo.');
                             }
                         }
@@ -67,6 +69,10 @@ export function ClosetView() {
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
+    };
+
+    const handleRemove = async (id: string, imageUrl?: string) => {
+        await remove({ id, imageUrl });
     };
 
     if (isLoading) {
@@ -126,7 +132,7 @@ export function ClosetView() {
                                         </p>
                                     ) : (
                                         items.map(item => (
-                                            <ClothingCard key={item.id} item={item} onRemove={remove} />
+                                            <ClothingCard key={item.id} item={item} onRemove={handleRemove} />
                                         ))
                                     )}
                                 </div>
@@ -147,7 +153,7 @@ export function ClosetView() {
                     onClose={() => setShowModal(false)}
                     onAdd={add}
                     currentCount={wardrobe.length}
-                    isPro={profile.isPro ?? false}
+                    isPro={profile?.isPro ?? false}
                 />
             )}
         </div>

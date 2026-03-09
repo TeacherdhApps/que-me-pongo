@@ -1,110 +1,82 @@
-import { useState, useCallback, useEffect } from 'react';
-import { loadWardrobe, addClothingItem, updateClothingItem, deleteClothingItem, loadWeeklyPlan, saveWeeklyPlan } from '../lib/wardrobeStorage';
-import type { ClothingItem, Category, WeeklyPlan, DailyOutfit } from '../types';
-import { wardrobeEvents, authEvents } from '../lib/events';
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { 
+    loadWardrobe, 
+    addClothingItem, 
+    updateClothingItem, 
+    deleteClothingItem, 
+    loadWeeklyPlan, 
+    saveWeeklyPlan 
+} from '../lib/wardrobeStorage';
+import type { ClothingItem, Category, DailyOutfit } from '../types';
 
 export function useWardrobe() {
-    const [wardrobe, setWardrobe] = useState<ClothingItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    const refresh = useCallback(async () => {
-        try {
-            const data = await loadWardrobe();
-            setWardrobe(data);
-        } catch (err) {
-            console.error('Refresh wardrobe error:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const { data: wardrobe = [], isLoading } = useQuery({
+        queryKey: ['wardrobe'],
+        queryFn: loadWardrobe,
+    });
 
-    useEffect(() => {
-        refresh();
-        const unsubWardrobe = wardrobeEvents.subscribe(refresh);
-        const unsubAuth = authEvents.subscribe(refresh);
-        return () => {
-            unsubWardrobe();
-            unsubAuth();
-        };
-    }, [refresh]);
+    const addMutation = useMutation({
+        mutationFn: addClothingItem,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['wardrobe'] });
+        },
+    });
 
-    const add = useCallback(async (item: Omit<ClothingItem, 'id'>) => {
-        try {
-            const newItem = await addClothingItem(item);
-            // After successful cloud/local add, we just emit to all hooks to refresh from DB
-            // This ensures every instance of useWardrobe has the exact same state as the DB
-            wardrobeEvents.emit();
-            return newItem;
-        } catch (error) {
-            console.error('Failed to add item:', error);
-            throw error;
-        }
-    }, []);
+    const updateMutation = useMutation({
+        mutationFn: (args: { id: string; updates: Partial<ClothingItem> }) => 
+            updateClothingItem(args.id, args.updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['wardrobe'] });
+        },
+    });
 
-    const update = useCallback(async (id: string, updates: Partial<ClothingItem>) => {
-        try {
-            await updateClothingItem(id, updates);
-            wardrobeEvents.emit();
-        } catch (error) {
-            console.error('Failed to update item:', error);
-            throw error;
-        }
-    }, []);
-
-    const remove = useCallback(async (id: string, imageUrl?: string) => {
-        // Optimistic update: remove item from local state immediately
-        const previousWardrobe = [...wardrobe];
-        setWardrobe(prev => prev.filter(item => item.id !== id));
-
-        try {
-            await deleteClothingItem(id, imageUrl);
-            wardrobeEvents.emit(); // Sync everyone else
-        } catch (error) {
-            console.error('Failed to delete item, rolling back state:', error);
-            setWardrobe(previousWardrobe);
-            throw error;
-        }
-    }, [wardrobe]);
+    const deleteMutation = useMutation({
+        mutationFn: (args: { id: string; imageUrl?: string }) => 
+            deleteClothingItem(args.id, args.imageUrl),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['wardrobe'] });
+        },
+    });
 
     const filterByCategory = useCallback((category: Category) => {
         return wardrobe.filter(item => item.category === category);
     }, [wardrobe]);
 
-    return { wardrobe, isLoading, add, update, remove, filterByCategory, refresh };
+    return { 
+        wardrobe, 
+        isLoading, 
+        add: addMutation.mutateAsync, 
+        update: updateMutation.mutateAsync, 
+        remove: deleteMutation.mutateAsync, 
+        filterByCategory 
+    };
 }
 
-
 export function useWeeklyPlan() {
-    const [plan, setPlan] = useState<WeeklyPlan>({});
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    const refresh = useCallback(async () => {
-        try {
-            const data = await loadWeeklyPlan();
-            setPlan(data);
-        } catch (err) {
-            console.error('Refresh plan error:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const { data: plan = {}, isLoading } = useQuery({
+        queryKey: ['weekly-plan'],
+        queryFn: loadWeeklyPlan,
+    });
 
-    useEffect(() => {
-        refresh();
-        const unsub = authEvents.subscribe(refresh);
-        return () => unsub();
-    }, [refresh]);
+    const updateDayMutation = useMutation({
+        mutationFn: (args: { day: string; outfit: DailyOutfit }) => {
+            const nextPlan = { ...plan, [args.day]: args.outfit };
+            return saveWeeklyPlan(nextPlan);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
+        },
+    });
 
-    const updateDay = useCallback(async (day: string, outfit: DailyOutfit) => {
-        try {
-            // Update state immediately for UX
-            setPlan(prev => ({ ...prev, [day]: outfit }));
-            // Persist
-            await saveWeeklyPlan({ ...plan, [day]: outfit });
-        } catch (error) {
-            console.error('Failed to save plan:', error);
-        }
-    }, [plan]);
-
-    return { plan, isLoading, updateDay, refresh };
+    return { 
+        plan, 
+        isLoading, 
+        updateDay: (day: string, outfit: DailyOutfit) => updateDayMutation.mutateAsync({ day, outfit }) 
+    };
 }

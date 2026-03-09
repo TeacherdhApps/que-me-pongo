@@ -1,5 +1,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock Supabase
 vi.mock('../lib/supabase', () => ({
@@ -7,6 +9,7 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
@@ -37,6 +40,8 @@ vi.mock('../lib/wardrobeStorage', () => ({
   saveUserProfile: vi.fn().mockResolvedValue(undefined),
   uploadImage: vi.fn().mockResolvedValue('https://example.com/image.jpg'),
   deleteImage: vi.fn().mockResolvedValue(undefined),
+  syncLocalDataToCloud: vi.fn().mockResolvedValue(undefined),
+  clearAllData: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Background Removal
@@ -49,3 +54,13 @@ vi.mock('../lib/backgroundRemoval', () => ({
 vi.mock('../lib/imageResizer', () => ({
   resizeImage: vi.fn().mockResolvedValue('data:image/jpeg;base64,mock-resized'),
 }));
+
+// Create a wrapper for tests that use hooks
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: { retry: false },
+    },
+});
+
+export const wrapper = ({ children }: { children: React.ReactNode }) => 
+    createElement(QueryClientProvider, { client: queryClient }, children);

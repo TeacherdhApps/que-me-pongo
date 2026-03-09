@@ -1,24 +1,20 @@
-# Implementation Plan: Rewrite Storage Logic (`storage-rework`)
+# Implementation Plan: Rewrite Storage Logic (REV 2)
 
-## Phase 1: Core Storage Refactor (`src/lib/wardrobeStorage.ts`)
-Refactor the storage layer to be strictly "Supabase-First" with a local Dexie cache.
-- [ ] Implement `ensureUserSession()` to wait for Supabase auth before cloud operations.
-- [ ] Rewrite `addClothingItem` to update Supabase FIRST, then Dexie, then emit events.
-- [ ] Rewrite `deleteClothingItem` to delete from Supabase FIRST, then Dexie, then emit events.
-- [ ] Rewrite `loadWardrobe` to prioritize cloud data and strictly sync to local cache.
-- [ ] Simplify `sync` logic to be more transparent and less prone to race conditions.
+## Phase 1: Dependency Integration
+- [ ] Install `@tanstack/react-query` and `@tanstack/react-query-devtools`.
+- [ ] Initialize `QueryClient` in `main.tsx`.
 
-## Phase 2: Hook Optimization (`src/hooks/useWardrobe.ts`)
-Update hooks to handle the async nature of Supabase and storage operations correctly.
-- [ ] Ensure `isLoading` states in hooks are accurately reflecting both auth and data fetching status.
-- [ ] Standardize event-driven updates for all wardrobe and plan changes.
+## Phase 2: Refactor storage API (`src/lib/wardrobeStorage.ts`)
+Simplify the API to be purely about data fetching/manipulation (no event emission, no manual cache logic).
+- [ ] Simplify `loadWardrobe`, `addClothingItem`, `deleteClothingItem` to return direct results.
+- [ ] Fix `deleteClothingItem` to not throw or return `false` if the item is already gone from Supabase (to avoid UI rollback).
 
-## Phase 3: UI Feedback & Stability
-- [ ] Ensure `ClosetView` and `OutfitEditor` handle empty or loading states gracefully.
-- [ ] Provide visual feedback during adding/deleting operations to confirm success.
+## Phase 3: Implement React Query Hooks (`src/hooks/useWardrobe.ts`)
+- [ ] Replace `useState`/`useEffect` in `useWardrobe` with `useQuery`.
+- [ ] Implement `useMutation` for add/update/delete.
+- [ ] Use `onSuccess: () => queryClient.invalidateQueries(['wardrobe'])` for automatic syncing across all views.
 
-## Phase 4: Verification & Deployment
-- [ ] Perform a full reset of the wardrobe using the new feature.
-- [ ] Add 10+ items and verify visibility across all views.
-- [ ] Verify deletion permanence.
-- [ ] Deploy and verify on the live environment.
+## Phase 4: UI Update & Verification
+- [ ] Update `ClosetView` and `WeeklyPlanner` to use the new hook returns (`data`, `isLoading`).
+- [ ] Perform a full reset and verify item deletion and addition are stable across multiple browsers.
+- [ ] Final deployment.
