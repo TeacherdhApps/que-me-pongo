@@ -85,7 +85,8 @@ export function useWeeklyPlan() {
 
     useEffect(() => {
         refresh();
-        return authEvents.subscribe(refresh);
+        const unsub = authEvents.subscribe(refresh);
+        return () => unsub();
     }, [refresh]);
 
     const updateDay = useCallback(async (day: string, outfit: DailyOutfit) => {

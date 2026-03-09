@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { vi, describe, it, beforeEach } from 'vitest';
 import { AddItemModal } from '../components/AddItemModal';
 import * as wardrobeHooks from '../hooks/useWardrobe';
 import * as userHooks from '../hooks/useUserProfile';
