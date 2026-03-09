@@ -35,7 +35,16 @@ const ClothingCard = memo(({ item, onRemove }: { item: ClothingItem; onRemove: (
                 />
 
                 <button
-                    onClick={(e) => { e.stopPropagation(); onRemove(item.id, item.image); }}
+                    onClick={async (e) => {
+                        e.stopPropagation();
+                        if (window.confirm('¿Estás seguro de que quieres eliminar esta prenda?')) {
+                            try {
+                                await onRemove(item.id, item.image);
+                            } catch (err) {
+                                alert('No se pudo eliminar la prenda. Por favor, intenta de nuevo.');
+                            }
+                        }
+                    }}
                     className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:bg-red-50 hover:text-red-500 z-10"
                 >
                     <i className="fas fa-times text-[10px]"></i>

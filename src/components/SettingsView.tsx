@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import { exportAllData, importAllData } from '../lib/wardrobeStorage';
+import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
 
 export function SettingsView() {
@@ -12,6 +12,19 @@ export function SettingsView() {
     const { isInstallable, installApp } = usePWAInstall();
     const [importStatus, setImportStatus] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleReset = async () => {
+        if (window.confirm('⚠️ ¿Estás COMPLETAMENTE seguro? Esto borrará todas tus prendas, planes y perfil permanentemente de la nube y este dispositivo.')) {
+            try {
+                await clearAllData();
+                alert('Armario reiniciado correctamente. La página se recargará.');
+                window.location.reload();
+            } catch (err) {
+                console.error('Error resetting:', err);
+                alert('Error al reiniciar. Intenta de nuevo.');
+            }
+        }
+    };
 
     const handleExport = async () => {
         const json = await exportAllData();
@@ -205,6 +218,12 @@ export function SettingsView() {
                         className="bg-white border-2 border-black text-black px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform"
                     >
                         Importar Datos
+                    </button>
+                    <button
+                        onClick={handleReset}
+                        className="bg-red-50 text-red-500 border border-red-100 px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all ml-auto"
+                    >
+                        Reiniciar Armario
                     </button>
                     <input
                         ref={fileInputRef}

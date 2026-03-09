@@ -79,6 +79,33 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
     const userId = await getUserId();
 
     if (userId) {
+        // --- Sync Logic: Move local items to Supabase if they exist ---
+        const localItems = await db.wardrobe.toArray();
+        if (localItems.length > 0) {
+            console.log(`Syncing ${localItems.length} local items to Supabase for user ${userId}`);
+            const itemsToSync = localItems.map(item => {
+                const { id, ...rest } = item;
+                // If it's a local ID, let Supabase generate a new one
+                // Otherwise, keep the ID if it's already a UUID (from a previous export/import)
+                if (id.startsWith('local-')) {
+                    return { ...rest, user_id: userId };
+                }
+                return { ...item, user_id: userId };
+            });
+
+            const { error: syncError } = await supabase
+                .from('wardrobe')
+                .upsert(itemsToSync, { onConflict: 'id' }); // Use upsert to avoid duplicates
+
+            if (!syncError) {
+                // Clear local items after successful sync
+                await db.wardrobe.clear();
+                console.log('Local wardrobe synced and cleared.');
+            } else {
+                console.error('Error syncing wardrobe:', syncError);
+            }
+        }
+
         const { data, error } = await supabase
             .from('wardrobe')
             .select('*')
@@ -86,14 +113,27 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
 
         if (error) {
             console.error('Error loading from Supabase:', error);
-            return [];
+            // Fallback to cache if offline
+            return await db.wardrobe.toArray();
         }
+
+        // Update local cache to match exactly what is in Supabase
+        await db.wardrobe.clear();
+        if (data && data.length > 0) {
+            await db.wardrobe.bulkPut(data);
+        }
+        
         return data as ClothingItem[];
     }
 
     // Dexie Fallback
     try {
+        const migrated = await db.appSettings.get('wardrobe-migrated');
         const localItems = await db.wardrobe.toArray();
+
+        // If already migrated and empty, it's valid empty state
+        if (migrated && localItems.length === 0) return [];
+        // If there are items, return them
         if (localItems.length > 0) return localItems;
 
         // Migrate from localStorage if needed
@@ -104,10 +144,14 @@ export async function loadWardrobe(): Promise<ClothingItem[]> {
             const parsed = JSON.parse(raw);
             const items = Array.isArray(parsed) ? parsed : [];
             await db.wardrobe.bulkPut(items);
+            await db.appSettings.put({ id: 'wardrobe-migrated', value: true });
             localStorage.removeItem('que-me-pongo:wardrobe');
             localStorage.removeItem('cc_items');
             return items;
         }
+
+        // Mark as migrated even if nothing was in localStorage
+        await db.appSettings.put({ id: 'wardrobe-migrated', value: true });
         return [];
     } catch {
         return [];
@@ -190,11 +234,10 @@ export async function deleteClothingItem(id: string, imageUrl?: string): Promise
 
         // If count is 0, it means no rows were deleted (maybe already gone or wrong user)
         if (count === 0) {
-            console.warn(`No item found to delete with id ${id} for user ${userId}`);
-            return false;
+            console.warn(`No item found to delete with id ${id} for user ${userId}. Continuing as successful.`);
         }
 
-        // Only delete the image if the database record was successfully removed
+        // Always attempt to delete the image if provided
         if (imageUrl) {
             await deleteImage(imageUrl);
         }
@@ -205,9 +248,10 @@ export async function deleteClothingItem(id: string, imageUrl?: string): Promise
     // Dexie Storage
     console.log(`Deleting local item ${id}`);
     try {
-        await db.wardrobe.delete(id);
-        await db.wardrobe.delete(Number(id) as any); // Fallback for numeric IDs
-        return true;
+        // Attempt deletion of both string and numeric IDs
+        const result1 = await db.wardrobe.where('id').equals(id).delete();
+        const result2 = await db.wardrobe.where('id').equals(Number(id) as any).delete();
+        return result1 > 0 || result2 > 0;
     } catch (err) {
         console.error('Error deleting from Dexie:', err);
         return false;
@@ -220,6 +264,22 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
     const userId = await getUserId();
 
     if (userId) {
+        // --- Sync Logic: Move local plan to Supabase if it exists ---
+        const localPlan = await db.plans.get('weekly-plan');
+        if (localPlan) {
+            console.log(`Syncing local plan to Supabase for user ${userId}`);
+            const { error: syncError } = await supabase
+                .from('plans')
+                .upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
+
+            if (!syncError) {
+                await db.plans.delete('weekly-plan');
+                console.log('Local plan synced and cleared.');
+            } else {
+                console.error('Error syncing plan:', syncError);
+            }
+        }
+
         const { data, error } = await supabase
             .from('plans')
             .select('plan_data')
@@ -234,7 +294,10 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
     // Dexie Fallback
     try {
+        const migrated = await db.appSettings.get('plans-migrated');
         let record = await db.plans.get('weekly-plan');
+
+        if (migrated && !record) return {};
         if (record) return record.plan_data;
 
         // Migrate from localStorage
@@ -242,9 +305,11 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
         if (fallback) {
             const parsed = JSON.parse(fallback);
             await db.plans.put({ id: 'weekly-plan', plan_data: parsed });
+            await db.appSettings.put({ id: 'plans-migrated', value: true });
             localStorage.removeItem('que-me-pongo:weekly-plan');
             return parsed;
         }
+        await db.appSettings.put({ id: 'plans-migrated', value: true });
         return {};
     } catch {
         return {};
@@ -278,6 +343,30 @@ export async function loadUserProfile(): Promise<UserProfile> {
     const userId = await getUserId();
 
     if (userId) {
+        // --- Sync Logic: Move local profile to Supabase if it exists ---
+        const localProfile = await db.profiles.get('user-profile');
+        if (localProfile) {
+            console.log(`Syncing local profile to Supabase for user ${userId}`);
+            const { error: syncError } = await supabase
+                .from('profiles')
+                .upsert({
+                    user_id: userId,
+                    name: localProfile.profile_data.name || null,
+                    sex: localProfile.profile_data.sex || null,
+                    age: localProfile.profile_data.age || null,
+                    weight: localProfile.profile_data.weight || null,
+                    height: localProfile.profile_data.height || null,
+                    is_pro: localProfile.profile_data.isPro ?? false,
+                }, { onConflict: 'user_id' });
+
+            if (!syncError) {
+                await db.profiles.delete('user-profile');
+                console.log('Local profile synced and cleared.');
+            } else {
+                console.error('Error syncing profile:', syncError);
+            }
+        }
+
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
@@ -349,7 +438,40 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     }
 }
 
-// --- Export / Import ---
+// --- Export / Import / Clear ---
+
+export async function clearAllData(): Promise<void> {
+    const userId = await getUserId();
+    
+    // 1. Clear local Dexie DB
+    await db.wardrobe.clear();
+    await db.plans.clear();
+    await db.profiles.clear();
+    await db.appSettings.clear();
+    
+    // 2. Clear Supabase if user is logged in
+    if (userId) {
+        // We delete wardrobe items first
+        const { data: items } = await supabase.from('wardrobe').select('image').eq('user_id', userId);
+        
+        // Delete images from storage
+        if (items) {
+            for (const item of items) {
+                if (item.image) await deleteImage(item.image);
+            }
+        }
+        
+        await supabase.from('wardrobe').delete().eq('user_id', userId);
+        await supabase.from('plans').delete().eq('user_id', userId);
+        await supabase.from('profiles').delete().eq('user_id', userId);
+    }
+    
+    // 3. Clear localStorage (legacy)
+    localStorage.removeItem('que-me-pongo:wardrobe');
+    localStorage.removeItem('que-me-pongo:weekly-plan');
+    localStorage.removeItem('que-me-pongo:user-profile');
+    localStorage.removeItem('cc_items');
+}
 
 export async function exportAllData(): Promise<string> {
     const data = {
