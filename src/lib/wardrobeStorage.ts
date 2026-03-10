@@ -159,9 +159,21 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
             const { data, error } = await supabase.from('plans').select('plan_data').eq('user_id', userId).single();
             if (!error && data) {
                 const cloudPlan = data.plan_data || {};
-                // Only update local if cloud is different/newer (simplified here)
-                await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
-                return cloudPlan;
+                
+                // Simple merge strategy: if local is empty, use cloud.
+                // Otherwise, we'd need timestamps to know which is newer.
+                // For now, let's at least not overwrite if local has something and cloud is empty.
+                if (Object.keys(localPlan).length === 0 && Object.keys(cloudPlan).length > 0) {
+                    await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
+                    return cloudPlan;
+                }
+                
+                // If both have data, we'll favor cloud for now but this is where 
+                // a more sophisticated sync/merge would go.
+                if (Object.keys(cloudPlan).length > 0) {
+                    await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
+                    return cloudPlan;
+                }
             }
         } catch (err) {
             console.error('Error loading plan from cloud, using local:', err);
@@ -172,13 +184,20 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
     const userId = await getUserId();
-    // 1. Save to local Dexie IMMEDIATELY and AWAIT it
+    // 1. Save to local Dexie IMMEDIATELY
     await db.plans.put({ id: 'weekly-plan', plan_data: plan });
     
     // 2. If online and logged in, sync to Supabase
     if (userId) {
-        const { error } = await supabase.from('plans').upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
-        if (error) console.error('Error syncing plan to Supabase:', error);
+        const { error } = await supabase.from('plans').upsert({ 
+            user_id: userId, 
+            plan_data: plan
+        }, { onConflict: 'user_id' });
+        
+        if (error) {
+            console.error('Error syncing plan to Supabase:', error);
+            // We don't throw here to allow offline mode to work
+        }
     }
 }
 

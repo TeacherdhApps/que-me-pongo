@@ -11,18 +11,24 @@ interface DayInfo {
     displayDate: string;
 }
 
-const PlannerDayCard = memo(({ day, items, onEdit, onView }: {
+const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
     day: DayInfo;
     items: ClothingItem[];
     onEdit: (day: DayInfo) => void;
     onView: (day: DayInfo) => void;
+    isToday: boolean;
 }) => {
     return (
-        <div className="bg-zinc-50 rounded-[2rem] p-8 flex items-center justify-between group hover:bg-zinc-100 transition-colors animate-fade">
+        <div className={`rounded-[2rem] p-8 flex items-center justify-between group transition-colors animate-fade ${isToday ? 'bg-black text-white ring-4 ring-black/10' : 'bg-zinc-50 hover:bg-zinc-100'}`}>
             <div className="flex items-center gap-12">
                 <div className="w-24 flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest">{day.name}</span>
-                    <span className="text-[10px] font-bold text-zinc-700 mt-1">{day.displayDate}</span>
+                    <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isToday ? 'text-white' : 'text-black'}`}>{day.name}</span>
+                        {isToday && (
+                            <span className="bg-white text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-sm">Hoy</span>
+                        )}
+                    </div>
+                    <span className={`text-[10px] font-bold mt-1 ${isToday ? 'text-zinc-400' : 'text-zinc-700'}`}>{day.displayDate}</span>
                 </div>
                 <div className="flex -space-x-4">
                     {items.map(itm => (
@@ -43,14 +49,14 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView }: {
                 {items.length > 0 && (
                     <button
                         onClick={() => onView(day)}
-                        className="text-[10px] font-black uppercase tracking-widest bg-zinc-100 px-6 py-3 rounded-full hover:bg-black hover:text-white transition-all"
+                        className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full transition-all ${isToday ? 'bg-zinc-800 text-white hover:bg-white hover:text-black' : 'bg-zinc-100 hover:bg-black hover:text-white'}`}
                     >
                         VER
                     </button>
                 )}
                 <button
                     onClick={() => onEdit(day)}
-                    className="text-[10px] font-black uppercase tracking-widest bg-white px-6 py-3 rounded-full shadow-sm hover:bg-zinc-50 transition-all border border-zinc-100"
+                    className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full shadow-sm transition-all border ${isToday ? 'bg-white text-black hover:bg-zinc-200 border-white' : 'bg-white hover:bg-zinc-50 border-zinc-100'}`}
                 >
                     EDITAR
                 </button>
@@ -162,15 +168,19 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                 <WeeklySkeleton />
             ) : (
                 <div className="grid gap-4">
-                    {weekDays.map(day => (
-                        <PlannerDayCard
-                            key={day.date}
-                            day={day}
-                            items={plan[day.date]?.items || []}
-                            onEdit={setEditingDay}
-                            onView={setViewingDay}
-                        />
-                    ))}
+                    {weekDays.map(day => {
+                        const isToday = day.date === formatDateKey(new Date());
+                        return (
+                            <PlannerDayCard
+                                key={day.date}
+                                day={day}
+                                items={plan[day.date]?.items || []}
+                                onEdit={setEditingDay}
+                                onView={setViewingDay}
+                                isToday={isToday}
+                            />
+                        );
+                    })}
                 </div>
             )}
 

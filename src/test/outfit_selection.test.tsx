@@ -16,14 +16,19 @@ const mockItem = {
 };
 
 describe('useWeeklyPlan outfit selection', () => {
+    let currentPlan: Record<string, any> = {};
+
     beforeEach(() => {
         vi.clearAllMocks();
+        currentPlan = {};
+        (wardrobeStorage.loadWeeklyPlan as any).mockImplementation(() => Promise.resolve(currentPlan));
+        (wardrobeStorage.saveWeeklyPlan as any).mockImplementation((plan: any) => {
+            currentPlan = plan;
+            return Promise.resolve();
+        });
     });
 
     it('should select an item and keep it selected', async () => {
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
-        (wardrobeStorage.saveWeeklyPlan as any).mockResolvedValue(undefined);
-
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
 
         // Wait for initial load
@@ -54,9 +59,6 @@ describe('useWeeklyPlan outfit selection', () => {
     });
 
     it('should toggle an item correctly (select then unselect)', async () => {
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
-        (wardrobeStorage.saveWeeklyPlan as any).mockResolvedValue(undefined);
-
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -64,7 +66,7 @@ describe('useWeeklyPlan outfit selection', () => {
         
         // 1. Select item
         await act(async () => {
-            await result.current.updateDay(day, (prev) => {
+            await result.current.updateDay(day, () => {
                 return { day: 'Martes', date: day, items: [mockItem as any] };
             });
         });

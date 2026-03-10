@@ -31,8 +31,8 @@ export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEdi
         return `${d}/${m}/${y}`;
     };
 
-    const toggleItemInDay = (item: ClothingItem) => {
-        updateDay(editingDay.date, (prev) => {
+    const toggleItemInDay = async (item: ClothingItem) => {
+        await updateDay(editingDay.date, (prev) => {
             const currentOutfit = prev || { day: editingDay.name, date: editingDay.date, items: [] };
             const isSelected = currentOutfit.items.find(i => String(i.id) === String(item.id));
 

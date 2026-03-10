@@ -135,13 +135,15 @@ export function useWeeklyPlan() {
     const { data: plan = {}, isLoading } = useQuery({
         queryKey: ['weekly-plan'],
         queryFn: loadWeeklyPlan,
+        staleTime: 1000 * 60 * 5, // 5 minutes
     });
 
     const updateDayMutation = useMutation({
-        mutationFn: async (args: { day: string; nextPlan: Record<string, DailyOutfit> }) => {
-            return saveWeeklyPlan(args.nextPlan);
+        mutationKey: ['update-weekly-plan'],
+        mutationFn: async ({ nextPlan }: { day: string; nextPlan: Record<string, DailyOutfit> }) => {
+            return saveWeeklyPlan(nextPlan);
         },
-        onMutate: async ({ day, nextPlan }) => {
+        onMutate: async ({ nextPlan }) => {
             // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
             await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
 
@@ -154,27 +156,32 @@ export function useWeeklyPlan() {
             // Return a context object with the snapshotted value
             return { previousPlan };
         },
-        onError: (_err, _newPlan, context) => {
+        onError: (_err, _variables, context) => {
             if (context?.previousPlan) {
                 queryClient.setQueryData(['weekly-plan'], context.previousPlan);
             }
         },
         onSettled: () => {
-            // Always refetch after error or success to stay in sync with server
-            queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
+            // Only invalidate if there are no more mutations in flight
+            if (queryClient.isMutating({ mutationKey: ['update-weekly-plan'] }) <= 1) {
+                queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
+            }
         },
     });
+
+    const updateDay = useCallback(async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
+        // Get the most current data from cache to avoid race conditions with multiple clicks
+        const currentPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || plan;
+        const oldOutfit = currentPlan[day] || { day: day, items: [], date: day };
+        const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
+        const nextPlan = { ...currentPlan, [day]: nextOutfit };
+        
+        return updateDayMutation.mutateAsync({ day, nextPlan });
+    }, [queryClient, plan, updateDayMutation.mutateAsync]);
 
     return { 
         plan, 
         isLoading, 
-        updateDay: async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
-            const currentPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || plan;
-            const oldOutfit = currentPlan[day] || { day: day, items: [], date: day };
-            const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
-            const nextPlan = { ...currentPlan, [day]: nextOutfit };
-            
-            return updateDayMutation.mutateAsync({ day, nextPlan });
-        }
+        updateDay 
     };
 }
