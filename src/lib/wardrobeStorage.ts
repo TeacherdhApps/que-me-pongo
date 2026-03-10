@@ -172,9 +172,13 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
     const userId = await getUserId();
+    // 1. Save to local Dexie IMMEDIATELY and AWAIT it
     await db.plans.put({ id: 'weekly-plan', plan_data: plan });
+    
+    // 2. If online and logged in, sync to Supabase
     if (userId) {
-        await supabase.from('plans').upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
+        const { error } = await supabase.from('plans').upsert({ user_id: userId, plan_data: plan }, { onConflict: 'user_id' });
+        if (error) console.error('Error syncing plan to Supabase:', error);
     }
 }
 
@@ -275,8 +279,8 @@ export async function syncLocalDataToCloud(userId: string): Promise<void> {
         }
 
         if (planChanged || itemsToMigrate.length > 0) {
-            await db.plans.put({ id: 'weekly-plan', plan_data: newPlan });
-            await supabase.from('plans').upsert({ user_id: userId, plan_data: newPlan }, { onConflict: 'user_id' });
+            console.log('TRACE: Syncing merged weekly plan to cloud...');
+            await saveWeeklyPlan(newPlan);
         }
     }
 

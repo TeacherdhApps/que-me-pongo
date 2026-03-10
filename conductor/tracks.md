@@ -4,3 +4,4 @@
 |---|---|---|---|
 | `storage-rework` | **Rewrite Storage Logic** | `completed` | `./tracks/storage-rework/` |
 | `storage-ux-improvements` | **Storage UX Improvements** | `active` | `./tracks/storage-ux-improvements/` |
+| `planner-storage-sync` | **Rewrite Planner Storage Sync** | `active` | `./tracks/planner-storage-sync/` |

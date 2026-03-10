@@ -37,11 +37,9 @@ vi.mock('../lib/wardrobeStorage', () => ({
   updateClothingItem: vi.fn().mockResolvedValue(undefined),
   deleteClothingItem: vi.fn().mockResolvedValue(true),
   loadWeeklyPlan: vi.fn().mockImplementation(() => {
-    console.log('TRACE: loadWeeklyPlan mock called, returning keys:', Object.keys(mockPlan));
     return Promise.resolve(mockPlan);
   }),
   saveWeeklyPlan: vi.fn().mockImplementation((plan) => {
-    console.log('TRACE: saveWeeklyPlan mock called with keys:', Object.keys(plan));
     mockPlan = plan;
     return Promise.resolve();
   }),
