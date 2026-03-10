@@ -215,18 +215,18 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
 export async function syncLocalDataToCloud(userId: string): Promise<void> {
     const localItems = await db.wardrobe.toArray();
     const itemsToMigrate = localItems.filter(i => i.id.startsWith('local-'));
+    const idMap = new Map<string, ClothingItem>();
     
     for (const item of itemsToMigrate) {
         const { id, ...rest } = item;
         let image = rest.image;
         
-        // If image is still base64, upload it first
         if (image.startsWith('data:')) {
             try {
                 image = await uploadImage(image, userId);
             } catch (err) {
                 console.error('Failed to upload image during sync:', err);
-                continue; // Skip this item for now
+                continue;
             }
         }
 
@@ -237,15 +237,40 @@ export async function syncLocalDataToCloud(userId: string): Promise<void> {
             .single();
 
         if (!error && data) {
-            // Remove local temp item and replace with cloud version in cache
             await db.wardrobe.delete(id);
             await db.wardrobe.put(data as ClothingItem);
+            idMap.set(id, data as ClothingItem);
         }
     }
 
     const localPlan = await db.plans.get('weekly-plan');
     if (localPlan) {
-        await supabase.from('plans').upsert({ user_id: userId, plan_data: localPlan.plan_data }, { onConflict: 'user_id' });
+        let planChanged = false;
+        const newPlan = { ...localPlan.plan_data };
+        
+        for (const date in newPlan) {
+            const outfit = newPlan[date];
+            let outfitChanged = false;
+            
+            const nextItems = outfit.items.map(i => {
+                const cloudItem = idMap.get(String(i.id));
+                if (cloudItem) {
+                    outfitChanged = true;
+                    return cloudItem;
+                }
+                return i;
+            });
+
+            if (outfitChanged) {
+                outfit.items = nextItems;
+                planChanged = true;
+            }
+        }
+
+        if (planChanged || itemsToMigrate.length > 0) {
+            await db.plans.put({ id: 'weekly-plan', plan_data: newPlan });
+            await supabase.from('plans').upsert({ user_id: userId, plan_data: newPlan }, { onConflict: 'user_id' });
+        }
     }
 
     const localProfile = await db.profiles.get('user-profile');

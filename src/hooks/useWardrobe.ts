@@ -138,18 +138,26 @@ export function useWeeklyPlan() {
     });
 
     const updateDayMutation = useMutation({
-        mutationFn: (args: { day: string; outfit: DailyOutfit }) => {
-            const nextPlan = { ...plan, [args.day]: args.outfit };
+        mutationFn: async (args: { day: string; update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit) }) => {
+            const currentPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
+            const oldOutfit = currentPlan[args.day] || { day: args.day, items: [], date: args.day };
+            const nextOutfit = typeof args.update === 'function' ? args.update(oldOutfit) : args.update;
+            
+            const nextPlan = { ...currentPlan, [args.day]: nextOutfit };
             return saveWeeklyPlan(nextPlan);
         },
-        onMutate: async ({ day, outfit }) => {
+        onMutate: async ({ day, update }) => {
             await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
             const previousPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']);
             
-            queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => ({
-                ...old,
-                [day]: outfit
-            }));
+            queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => {
+                const oldOutfit = old[day] || { day: day, items: [], date: day };
+                const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
+                return {
+                    ...old,
+                    [day]: nextOutfit
+                };
+            });
 
             return { previousPlan };
         },
@@ -166,6 +174,7 @@ export function useWeeklyPlan() {
     return { 
         plan, 
         isLoading, 
-        updateDay: (day: string, outfit: DailyOutfit) => updateDayMutation.mutateAsync({ day, outfit }) 
+        updateDay: (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => 
+            updateDayMutation.mutateAsync({ day, update }) 
     };
 }

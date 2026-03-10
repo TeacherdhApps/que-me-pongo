@@ -10,7 +10,7 @@ import { Categories } from '../types';
 interface OutfitEditorProps {
     editingDay: { name: string, date: string };
     plan: WeeklyPlan;
-    updateDay: (day: string, outfit: DailyOutfit) => void;
+    updateDay: (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => void;
     onClose: () => void;
 }
 
@@ -32,14 +32,16 @@ export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEdi
     };
 
     const toggleItemInDay = (item: ClothingItem) => {
-        const currentOutfit = plan[editingDay.date] || { day: editingDay.name, date: editingDay.date, items: [] };
-        const isSelected = currentOutfit.items.find(i => i.id === item.id);
+        updateDay(editingDay.date, (prev) => {
+            const currentOutfit = prev || { day: editingDay.name, date: editingDay.date, items: [] };
+            const isSelected = currentOutfit.items.find(i => String(i.id) === String(item.id));
 
-        const nextItems = isSelected
-            ? currentOutfit.items.filter(i => i.id !== item.id)
-            : [...currentOutfit.items, item];
+            const nextItems = isSelected
+                ? currentOutfit.items.filter(i => String(i.id) !== String(item.id))
+                : [...currentOutfit.items, item];
 
-        updateDay(editingDay.date, { ...currentOutfit, items: nextItems });
+            return { ...currentOutfit, day: editingDay.name, date: editingDay.date, items: nextItems };
+        });
     };
 
     return (
@@ -147,7 +149,7 @@ export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEdi
                                 {isOpen && (
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2 animate-fade py-4">
                                         {items.map(item => {
-                                            const active = plan[editingDay.date]?.items.find(i => i.id === item.id);
+                                            const active = plan[editingDay.date]?.items.find(i => String(i.id) === String(item.id));
                                             return (
                                                 <button
                                                     key={item.id}
