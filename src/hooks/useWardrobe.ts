@@ -129,52 +129,52 @@ export function useWardrobe() {
     };
 }
 
+import { useState, useEffect } from 'react';
+
 export function useWeeklyPlan() {
     const queryClient = useQueryClient();
 
-    const { data: plan = {}, isLoading } = useQuery({
+    const { data: planData = {}, isLoading } = useQuery({
         queryKey: ['weekly-plan'],
         queryFn: loadWeeklyPlan,
     });
 
+    const [plan, setPlan] = useState<Record<string, DailyOutfit>>(planData);
+
+    useEffect(() => {
+        if (planData) {
+            setPlan(planData);
+        }
+    }, [planData]);
+
     const updateDayMutation = useMutation({
-        mutationFn: async (args: { day: string; update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit) }) => {
-            const currentPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
-            const oldOutfit = currentPlan[args.day] || { day: args.day, items: [], date: args.day };
-            const nextOutfit = typeof args.update === 'function' ? args.update(oldOutfit) : args.update;
-            
-            const nextPlan = { ...currentPlan, [args.day]: nextOutfit };
+        mutationFn: async (nextPlan: Record<string, DailyOutfit>) => {
             return saveWeeklyPlan(nextPlan);
         },
-        onMutate: async ({ day, update }) => {
-            await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
-            const previousPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']);
-            
-            queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => {
-                const oldOutfit = old[day] || { day: day, items: [], date: day };
-                const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
-                return {
-                    ...old,
-                    [day]: nextOutfit
-                };
-            });
-
-            return { previousPlan };
-        },
-        onError: (_err, _args, context) => {
+        onError: (_err, _nextPlan, context: any) => {
             if (context?.previousPlan) {
-                queryClient.setQueryData(['weekly-plan'], context.previousPlan);
+                setPlan(context.previousPlan);
             }
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
         },
     });
 
     return { 
         plan, 
         isLoading, 
-        updateDay: (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => 
-            updateDayMutation.mutateAsync({ day, update }) 
+        updateDay: async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
+            const oldOutfit = plan[day] || { day: day, items: [], date: day };
+            const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
+            const nextPlan = { ...plan, [day]: nextOutfit };
+            
+            const previousPlan = plan;
+            setPlan(nextPlan);
+            
+            try {
+                await updateDayMutation.mutateAsync(nextPlan);
+            } catch (err) {
+                setPlan(previousPlan);
+                throw err;
+            }
+        }
     };
 }

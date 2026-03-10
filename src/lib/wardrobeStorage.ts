@@ -151,16 +151,23 @@ export async function deleteClothingItem(id: string, imageUrl?: string): Promise
 
 export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
     const userId = await getUserId();
+    const localRecord = await db.plans.get('weekly-plan');
+    const localPlan = localRecord?.plan_data || {};
+
     if (userId) {
-        const { data, error } = await supabase.from('plans').select('plan_data').eq('user_id', userId).single();
-        if (!error && data) {
-            const plan = data.plan_data || {};
-            await db.plans.put({ id: 'weekly-plan', plan_data: plan });
-            return plan;
+        try {
+            const { data, error } = await supabase.from('plans').select('plan_data').eq('user_id', userId).single();
+            if (!error && data) {
+                const cloudPlan = data.plan_data || {};
+                // Only update local if cloud is different/newer (simplified here)
+                await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
+                return cloudPlan;
+            }
+        } catch (err) {
+            console.error('Error loading plan from cloud, using local:', err);
         }
     }
-    const record = await db.plans.get('weekly-plan');
-    return record?.plan_data || {};
+    return localPlan;
 }
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {

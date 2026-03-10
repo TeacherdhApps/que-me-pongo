@@ -28,14 +28,23 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
+let mockPlan: any = {};
+
 // Mock Wardrobe Storage
 vi.mock('../lib/wardrobeStorage', () => ({
   loadWardrobe: vi.fn().mockResolvedValue([]),
   addClothingItem: vi.fn().mockImplementation((item) => Promise.resolve({ ...item, id: 'test-id' })),
   updateClothingItem: vi.fn().mockResolvedValue(undefined),
   deleteClothingItem: vi.fn().mockResolvedValue(true),
-  loadWeeklyPlan: vi.fn().mockResolvedValue({}),
-  saveWeeklyPlan: vi.fn().mockResolvedValue(undefined),
+  loadWeeklyPlan: vi.fn().mockImplementation(() => {
+    console.log('TRACE: loadWeeklyPlan mock called, returning keys:', Object.keys(mockPlan));
+    return Promise.resolve(mockPlan);
+  }),
+  saveWeeklyPlan: vi.fn().mockImplementation((plan) => {
+    console.log('TRACE: saveWeeklyPlan mock called with keys:', Object.keys(plan));
+    mockPlan = plan;
+    return Promise.resolve();
+  }),
   loadUserProfile: vi.fn().mockResolvedValue({ isPro: false }),
   saveUserProfile: vi.fn().mockResolvedValue(undefined),
   uploadImage: vi.fn().mockResolvedValue('https://example.com/image.jpg'),
@@ -58,9 +67,17 @@ vi.mock('../lib/imageResizer', () => ({
 // Create a wrapper for tests that use hooks
 const queryClient = new QueryClient({
     defaultOptions: {
-        queries: { retry: false },
+        queries: { retry: false, gcTime: 0 },
     },
 });
+
+// Reset query client before each test
+if (typeof beforeEach !== 'undefined') {
+    beforeEach(() => {
+        queryClient.clear();
+        mockPlan = {};
+    });
+}
 
 export const wrapper = ({ children }: { children: React.ReactNode }) => 
     createElement(QueryClientProvider, { client: queryClient }, children);
