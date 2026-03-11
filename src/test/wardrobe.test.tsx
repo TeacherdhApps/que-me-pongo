@@ -18,13 +18,20 @@ describe('AddItemModal - Pro limits', () => {
 
     it('should block adding more than 100 items for Free users', async () => {
         // Mock 100 items and Not Pro
-        (wardrobeHooks.useWardrobe as any).mockReturnValue({
+        vi.mocked(wardrobeHooks.useWardrobe).mockReturnValue({
             wardrobe: Array(100).fill({ id: 'some-id' }),
             add: vi.fn(),
-        });
-        (userHooks.useUserProfile as any).mockReturnValue({
+            loading: false,
+            error: null,
+            deleteItem: vi.fn(),
+            update: vi.fn(),
+        } as any); // Still need some any or full mock object
+        vi.mocked(userHooks.useUserProfile).mockReturnValue({
             profile: { isPro: false },
-        });
+            loading: false,
+            error: null,
+            updateProfile: vi.fn(),
+        } as any);
 
         render(<AddItemModal 
             onClose={vi.fn()} 
@@ -38,13 +45,20 @@ describe('AddItemModal - Pro limits', () => {
     });
 
     it('should allow more than 100 items for Pro users', () => {
-         (wardrobeHooks.useWardrobe as any).mockReturnValue({
+         vi.mocked(wardrobeHooks.useWardrobe).mockReturnValue({
             wardrobe: Array(101).fill({ id: 'some-id' }),
             add: vi.fn(),
-        });
-        (userHooks.useUserProfile as any).mockReturnValue({
+            loading: false,
+            error: null,
+            deleteItem: vi.fn(),
+            update: vi.fn(),
+        } as any);
+        vi.mocked(userHooks.useUserProfile).mockReturnValue({
             profile: { isPro: true },
-        });
+            loading: false,
+            error: null,
+            updateProfile: vi.fn(),
+        } as any);
 
         render(<AddItemModal 
             onClose={vi.fn()} 
