@@ -3,6 +3,7 @@ import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { AddItemModal } from './AddItemModal';
 import { StorageHealth } from './StorageHealth';
+import { TodayOutfitWidget } from './TodayOutfitWidget';
 import { Categories } from '../types';
 import type { Category, ClothingItem } from '../types';
 
@@ -142,6 +143,9 @@ export function ClosetView() {
 
     return (
         <div className="animate-fade pb-20">
+            {/* Today's Outfit Shortcut */}
+            {!isSelectionMode && <TodayOutfitWidget />}
+
             <div className="flex justify-between items-end mb-16">
                 <div>
                     <h2 className="text-4xl font-black uppercase tracking-tighter">Mi Colección</h2>

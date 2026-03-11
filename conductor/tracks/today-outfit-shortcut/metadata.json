@@ -1,0 +1,11 @@
+{
+  "track_id": "today-outfit-shortcut",
+  "title": "Today's Outfit Shortcut",
+  "status": "completed",
+  "milestones": [
+    { "id": "step-1", "title": "Create Widget", "status": "completed" },
+    { "id": "step-2", "title": "Integrate ClosetView", "status": "completed" },
+    { "id": "step-3", "title": "Quick Actions", "status": "completed" },
+    { "id": "step-4", "title": "Verification", "status": "completed" }
+  ]
+}

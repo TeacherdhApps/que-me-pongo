@@ -3,11 +3,11 @@
   "title": "Storage UX Improvements",
   "status": "active",
   "milestones": [
-    { "id": "step-1", "title": "Optimistic Updates", "status": "in-progress" },
+    { "id": "step-1", "title": "Optimistic Updates", "status": "completed" },
     { "id": "step-2", "title": "Cloud Sync Indicators", "status": "todo" },
-    { "id": "step-3", "title": "Smart Offline Queueing", "status": "todo" },
-    { "id": "step-4", "title": "Storage Quota Dashboard", "status": "todo" },
-    { "id": "step-5", "title": "Bulk Management", "status": "todo" },
-    { "id": "step-6", "title": "Progressive Image Loading", "status": "todo" }
+    { "id": "step-3", "title": "Smart Offline Queueing", "status": "completed" },
+    { "id": "step-4", "title": "Storage Quota Dashboard", "status": "completed" },
+    { "id": "step-5", "title": "Bulk Management", "status": "completed" },
+    { "id": "step-6", "title": "Progressive Image Loading", "status": "completed" }
   ]
 }

@@ -1,14 +1,14 @@
 # Implementation Plan: Planner Storage Sync Rewrite (`planner-storage-sync`)
 
 ## Step 1: Simplify `useWeeklyPlan` Hook
-- [ ] Remove local `useState` sync logic (it's redundant with TanStack Query's cache).
-- [ ] Implement `onMutate` for the `updateDayMutation` for robust optimistic updates.
-- [ ] Ensure `onSettled` correctly invalidates the query to stay in sync.
+- [x] Remove local `useState` sync logic (it's redundant with TanStack Query's cache).
+- [x] Implement `onMutate` for the `updateDayMutation` for robust optimistic updates.
+- [x] Ensure `onSettled` correctly invalidates the query to stay in sync.
 
 ## Step 2: Refactor `saveWeeklyPlan` Storage Function
-- [ ] Ensure Dexie write is `await`-ed before anything else.
-- [ ] Make cloud sync independent or part of the `mutateAsync` flow as it is now.
-- [ ] Verify that `loadWeeklyPlan` doesn't return stale data after a save.
+- [x] Ensure Dexie write is `await`-ed before anything else.
+- [x] Make cloud sync independent or part of the `mutateAsync` flow as it is now.
+- [x] Verify that `loadWeeklyPlan` doesn't return stale data after a save.
 
 ## Step 3: Verify and Fix State Reversion
 - [ ] Ensure `useQuery` doesn't overwrite optimistic data while a mutation is in flight.
