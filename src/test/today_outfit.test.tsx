@@ -1,5 +1,5 @@
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TodayOutfitWidget } from '../components/TodayOutfitWidget';
 import * as wardrobeStorage from '../lib/wardrobeStorage';
@@ -24,7 +24,7 @@ describe('TodayOutfitWidget', () => {
     });
 
     it('should display "CREAR OUTFIT" when today is empty', async () => {
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockResolvedValue({});
         
         render(<TodayOutfitWidget />, { wrapper });
 
@@ -47,12 +47,12 @@ describe('TodayOutfitWidget', () => {
                 day: 'Hoy',
                 date: dateKey,
                 items: [
-                    { id: '1', name: 'Camisa', image: 'camisa.jpg', category: 'Superior' }
+                    { id: '1', name: 'Camisa', image: 'camisa.jpg', category: 'Superior', color: 'white', tags: [] }
                 ]
             }
         };
 
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue(mockPlan);
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockResolvedValue(mockPlan as any);
 
         render(<TodayOutfitWidget />, { wrapper });
 
@@ -69,9 +69,9 @@ describe('TodayOutfitWidget', () => {
         const d = String(today.getDate()).padStart(2, '0');
         const dateKey = `${y}-${m}-${d}`;
 
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockResolvedValue({});
         
-        const { rerender } = render(<TodayOutfitWidget />, { wrapper });
+        const { } = render(<TodayOutfitWidget />, { wrapper });
 
         await waitFor(() => expect(screen.getByText('CREAR OUTFIT')).toBeInTheDocument());
 
@@ -83,16 +83,16 @@ describe('TodayOutfitWidget', () => {
         
         // Use a module-level variable from setup.ts (we need to be able to access it)
         // Actually, we can just use the vi.mocked helper if we want to change implementation
-        (wardrobeStorage.loadWardrobe as any).mockResolvedValue([
-            { id: '1', name: 'Item 1', image: '1.jpg', category: 'Superior' },
-            { id: '2', name: 'Item 2', image: '2.jpg', category: 'Superior' }
+        vi.mocked(wardrobeStorage.loadWardrobe).mockResolvedValue([
+            { id: '1', name: 'Item 1', image: '1.jpg', category: 'Superior', color: 'red', tags: [] },
+            { id: '2', name: 'Item 2', image: '2.jpg', category: 'Superior', color: 'blue', tags: [] }
         ]);
 
         // We might need to wait for wardrobe to load in the editor
         await waitFor(() => expect(screen.getByText('Superior')).toBeInTheDocument());
         
         // Open the Superior section
-        screen.getByText('Superior').click();
+        fireEvent.click(screen.getByText('Superior'));
 
         await waitFor(() => expect(screen.getByAltText('Item 1')).toBeInTheDocument());
 
@@ -100,8 +100,8 @@ describe('TodayOutfitWidget', () => {
         const item1 = screen.getByAltText('Item 1');
         const item2 = screen.getByAltText('Item 2');
 
-        item1.click();
-        item2.click();
+        fireEvent.click(item1);
+        fireEvent.click(item2);
 
         // Check if both items are in the save call
         await waitFor(() => {

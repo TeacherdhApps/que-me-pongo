@@ -13,7 +13,7 @@ describe('useWeeklyPlan persistence', () => {
 
     it('should load the weekly plan on mount', async () => {
         const mockPlan = { Lunes: { day: 'Lunes', items: [] } };
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue(mockPlan);
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockResolvedValue(mockPlan as any);
 
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
 
@@ -22,8 +22,8 @@ describe('useWeeklyPlan persistence', () => {
     });
 
     it('should call saveWeeklyPlan when updateDay is called', async () => {
-        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
-        (wardrobeStorage.saveWeeklyPlan as any).mockResolvedValue(undefined);
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockResolvedValue({});
+        vi.mocked(wardrobeStorage.saveWeeklyPlan).mockResolvedValue(undefined);
 
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
         await waitFor(() => expect(result.current.isLoading).toBe(false));
