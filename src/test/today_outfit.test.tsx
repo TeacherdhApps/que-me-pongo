@@ -61,4 +61,54 @@ describe('TodayOutfitWidget', () => {
         });
         expect(screen.getByRole('img')).toHaveAttribute('src', 'camisa.jpg');
     });
+
+    it('should handle multiple rapid updates without losing state', async () => {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        const dateKey = `${y}-${m}-${d}`;
+
+        (wardrobeStorage.loadWeeklyPlan as any).mockResolvedValue({});
+        
+        const { rerender } = render(<TodayOutfitWidget />, { wrapper });
+
+        await waitFor(() => expect(screen.getByText('CREAR OUTFIT')).toBeInTheDocument());
+
+        // Open editor
+        screen.getByText('CREAR OUTFIT').click();
+
+        // In OutfitEditor (we need to make sure we can find things)
+        // Since OutfitEditor is a modal that renders in full screen, it should be in the DOM
+        
+        // Use a module-level variable from setup.ts (we need to be able to access it)
+        // Actually, we can just use the vi.mocked helper if we want to change implementation
+        (wardrobeStorage.loadWardrobe as any).mockResolvedValue([
+            { id: '1', name: 'Item 1', image: '1.jpg', category: 'Superior' },
+            { id: '2', name: 'Item 2', image: '2.jpg', category: 'Superior' }
+        ]);
+
+        // We might need to wait for wardrobe to load in the editor
+        await waitFor(() => expect(screen.getByText('Superior')).toBeInTheDocument());
+        
+        // Open the Superior section
+        screen.getByText('Superior').click();
+
+        await waitFor(() => expect(screen.getByAltText('Item 1')).toBeInTheDocument());
+
+        // Click Item 1 then Item 2 rapidly
+        const item1 = screen.getByAltText('Item 1');
+        const item2 = screen.getByAltText('Item 2');
+
+        item1.click();
+        item2.click();
+
+        // Check if both items are in the save call
+        await waitFor(() => {
+            const calls = vi.mocked(wardrobeStorage.saveWeeklyPlan).mock.calls;
+            expect(calls.length).toBeGreaterThan(0);
+            const lastCall = calls[calls.length - 1][0];
+            expect(lastCall[dateKey].items).toHaveLength(2);
+        }, { timeout: 2000 });
+    });
 });

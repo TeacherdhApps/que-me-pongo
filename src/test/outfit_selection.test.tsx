@@ -82,4 +82,39 @@ describe('useWeeklyPlan outfit selection', () => {
 
         await waitFor(() => expect(result.current.plan[day]?.items).toHaveLength(0));
     });
+
+    it('should maintain optimistic state even with slow network', async () => {
+        let resolveSave: (value: void | PromiseLike<void>) => void;
+        const savePromise = new Promise<void>((resolve) => {
+            resolveSave = resolve;
+        });
+
+        // Mock save to be slow
+        (wardrobeStorage.saveWeeklyPlan as any).mockReturnValue(savePromise);
+
+        const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
+        await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+        const day = '2026-03-10';
+        
+        // Update day
+        act(() => {
+            result.current.updateDay(day, { day: 'Martes', date: day, items: [mockItem as any] });
+        });
+
+        // Optimistic state should be set immediately (but might need a tick to propagate to hook return)
+        await waitFor(() => {
+            expect(result.current.plan[day]).toBeDefined();
+            expect(result.current.plan[day]?.items).toHaveLength(1);
+        });
+
+        // Resolve the save
+        await act(async () => {
+            resolveSave!(undefined);
+            await savePromise;
+        });
+
+        // State should still be there
+        expect(result.current.plan[day]?.items).toHaveLength(1);
+    });
 });

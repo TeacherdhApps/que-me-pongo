@@ -10,6 +10,17 @@ import {
 } from '../lib/wardrobeStorage';
 import type { ClothingItem, Category, DailyOutfit } from '../types';
 
+class SerialQueue {
+    private promise: Promise<any> = Promise.resolve();
+
+    enqueue<T>(fn: () => Promise<T>): Promise<T> {
+        this.promise = this.promise.then(() => fn());
+        return this.promise;
+    }
+}
+
+const planQueue = new SerialQueue();
+
 export function useWardrobe() {
     const queryClient = useQueryClient();
 
@@ -140,20 +151,23 @@ export function useWeeklyPlan() {
 
     const updateDayMutation = useMutation({
         mutationKey: ['update-weekly-plan'],
-        mutationFn: async ({ nextPlan }: { day: string; nextPlan: Record<string, DailyOutfit> }) => {
-            return saveWeeklyPlan(nextPlan);
+        mutationFn: async ({ day, nextOutfit }: { day: string; nextOutfit: DailyOutfit }) => {
+            // By the time this runs, the cache might have been updated multiple times optimistically.
+            // We want to save the ABSOLUTE LATEST state of the whole plan.
+            const latestPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
+            const fullPlan = { ...latestPlan, [day]: nextOutfit };
+            return saveWeeklyPlan(fullPlan);
         },
-        onMutate: async ({ nextPlan }) => {
-            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+        onMutate: async ({ day, nextOutfit }) => {
             await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
-
-            // Snapshot the previous value
             const previousPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']);
 
-            // Optimistically update to the new value
-            queryClient.setQueryData(['weekly-plan'], nextPlan);
+            // OPTIMISTIC UPDATE: Use functional update to ensure we never base our change on stale cache.
+            queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => ({
+                ...old,
+                [day]: nextOutfit
+            }));
 
-            // Return a context object with the snapshotted value
             return { previousPlan };
         },
         onError: (_err, _variables, context) => {
@@ -162,22 +176,20 @@ export function useWeeklyPlan() {
             }
         },
         onSettled: () => {
-            // Only invalidate if there are no more mutations in flight
-            if (queryClient.isMutating({ mutationKey: ['update-weekly-plan'] }) <= 1) {
-                queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
-            }
+            queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
         },
     });
 
     const updateDay = useCallback(async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
-        // Get the most current data from cache to avoid race conditions with multiple clicks
-        const currentPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || plan;
-        const oldOutfit = currentPlan[day] || { day: day, items: [], date: day };
-        const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
-        const nextPlan = { ...currentPlan, [day]: nextOutfit };
-        
-        return updateDayMutation.mutateAsync({ day, nextPlan });
-    }, [queryClient, plan, updateDayMutation.mutateAsync]);
+        return planQueue.enqueue(async () => {
+            // Get the absolute latest data from the cache right now
+            const currentCache = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
+            const oldOutfit = currentCache[day] || { day: day, items: [], date: day };
+            const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
+            
+            return updateDayMutation.mutateAsync({ day, nextOutfit });
+        });
+    }, [queryClient, updateDayMutation.mutateAsync]);
 
     return { 
         plan, 

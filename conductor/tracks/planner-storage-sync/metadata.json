@@ -1,11 +1,11 @@
 {
   "id": "planner-storage-sync",
   "title": "Rewrite Planner Storage Sync",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     { "id": "step-1", "title": "Simplify useWeeklyPlan Hook", "status": "completed" },
     { "id": "step-2", "title": "Refactor saveWeeklyPlan Storage", "status": "completed" },
-    { "id": "step-3", "title": "Verify and Fix State Reversion", "status": "todo" },
-    { "id": "step-4", "title": "Add Verification Tests", "status": "todo" }
+    { "id": "step-3", "title": "Verify and Fix State Reversion", "status": "completed" },
+    { "id": "step-4", "title": "Add Verification Tests", "status": "completed" }
   ]
 }

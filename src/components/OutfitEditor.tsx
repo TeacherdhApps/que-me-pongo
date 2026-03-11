@@ -1,9 +1,9 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWeather } from '../hooks/useWeather';
 import { useOutfitRecommendation } from '../hooks/useOutfitRecommendation';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ClothingItem, WeeklyPlan, DailyOutfit, Category } from '../types';
 import { Categories } from '../types';
 
@@ -14,13 +14,29 @@ interface OutfitEditorProps {
     onClose: () => void;
 }
 
-export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEditorProps) {
+export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose }: OutfitEditorProps) {
+    const queryClient = useQueryClient();
     const { wardrobe } = useWardrobe();
     const { profile } = useUserProfile();
     const { weather } = useWeather();
     const { recommendation, loading: aiLoading, error: aiError, generateRecommendation } = useOutfitRecommendation();
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const [showAI, setShowAI] = useState(false);
+
+    // Track items locally to ensure instant feedback even with rapid clicks
+    // We initialize from the query cache if available, otherwise use initialPlan
+    const [optimisticItems, setOptimisticItems] = useState<ClothingItem[]>(() => {
+        const cached = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']);
+        return cached?.[editingDay.date]?.items || initialPlan[editingDay.date]?.items || [];
+    });
+
+    // Keep optimistic items in sync with cache changes from other sources if needed
+    // although here we are the primary editor.
+    useEffect(() => {
+        const cached = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']);
+        const items = cached?.[editingDay.date]?.items || initialPlan[editingDay.date]?.items || [];
+        setOptimisticItems(items);
+    }, [queryClient, editingDay.date, initialPlan]);
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
@@ -31,16 +47,21 @@ export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEdi
         return `${d}/${m}/${y}`;
     };
 
-    const toggleItemInDay = async (item: ClothingItem) => {
-        await updateDay(editingDay.date, (prev) => {
-            const currentOutfit = prev || { day: editingDay.name, date: editingDay.date, items: [] };
-            const isSelected = currentOutfit.items.find(i => String(i.id) === String(item.id));
-
+    const toggleItemInDay = (item: ClothingItem) => {
+        setOptimisticItems(prev => {
+            const isSelected = prev.find(i => String(i.id) === String(item.id));
             const nextItems = isSelected
-                ? currentOutfit.items.filter(i => String(i.id) !== String(item.id))
-                : [...currentOutfit.items, item];
+                ? prev.filter(i => String(i.id) !== String(item.id))
+                : [...prev, item];
 
-            return { ...currentOutfit, day: editingDay.name, date: editingDay.date, items: nextItems };
+            // Trigger the mutation with the new items
+            updateDay(editingDay.date, {
+                day: editingDay.name,
+                date: editingDay.date,
+                items: nextItems
+            });
+
+            return nextItems;
         });
     };
 
@@ -149,7 +170,7 @@ export function OutfitEditor({ editingDay, plan, updateDay, onClose }: OutfitEdi
                                 {isOpen && (
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2 animate-fade py-4">
                                         {items.map(item => {
-                                            const active = plan[editingDay.date]?.items.find(i => String(i.id) === String(item.id));
+                                            const active = optimisticItems.find(i => String(i.id) === String(item.id));
                                             return (
                                                 <button
                                                     key={item.id}

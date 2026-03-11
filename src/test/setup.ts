@@ -29,10 +29,11 @@ vi.mock('../lib/supabase', () => ({
 }));
 
 let mockPlan: any = {};
+let mockWardrobe: any[] = [];
 
 // Mock Wardrobe Storage
 vi.mock('../lib/wardrobeStorage', () => ({
-  loadWardrobe: vi.fn().mockResolvedValue([]),
+  loadWardrobe: vi.fn().mockImplementation(() => Promise.resolve(mockWardrobe)),
   addClothingItem: vi.fn().mockImplementation((item) => Promise.resolve({ ...item, id: 'test-id' })),
   updateClothingItem: vi.fn().mockResolvedValue(undefined),
   deleteClothingItem: vi.fn().mockResolvedValue(true),
@@ -74,6 +75,7 @@ if (typeof beforeEach !== 'undefined') {
     beforeEach(() => {
         queryClient.clear();
         mockPlan = {};
+        mockWardrobe = [];
     });
 }
 

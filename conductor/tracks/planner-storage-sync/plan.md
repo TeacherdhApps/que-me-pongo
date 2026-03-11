@@ -11,9 +11,10 @@
 - [x] Verify that `loadWeeklyPlan` doesn't return stale data after a save.
 
 ## Step 3: Verify and Fix State Reversion
-- [ ] Ensure `useQuery` doesn't overwrite optimistic data while a mutation is in flight.
-- [ ] Test with simulated slow network to confirm optimistic state holds.
+- [x] Ensure `useQuery` doesn't overwrite optimistic data while a mutation is in flight.
+- [x] Test with simulated slow network to confirm optimistic state holds.
+- [x] Implemented SerialQueue and functional updates to prevent race conditions during rapid clicks.
 
 ## Step 4: Add Verification Tests
-- [ ] Update `src/test/outfit_selection.test.tsx` to use more realistic mocks.
-- [ ] Add a test case for simulated slow cloud responses.
+- [x] Update `src/test/outfit_selection.test.tsx` to use more realistic mocks.
+- [x] Add a test case for simulated slow cloud responses.
