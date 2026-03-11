@@ -11,11 +11,12 @@ import {
 import type { ClothingItem, Category, DailyOutfit } from '../types';
 
 class SerialQueue {
-    private promise: Promise<any> = Promise.resolve();
+    private promise: Promise<void> = Promise.resolve();
 
     enqueue<T>(fn: () => Promise<T>): Promise<T> {
-        this.promise = this.promise.then(() => fn());
-        return this.promise;
+        const next = this.promise.then(() => fn());
+        this.promise = next.then(() => {});
+        return next;
     }
 }
 

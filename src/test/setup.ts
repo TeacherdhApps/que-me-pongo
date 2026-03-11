@@ -28,8 +28,10 @@ vi.mock('../lib/supabase', () => ({
   },
 }));
 
-let mockPlan: any = {};
-let mockWardrobe: any[] = [];
+import type { ClothingItem, WeeklyPlan } from '../types';
+
+let mockPlan: WeeklyPlan = {};
+let mockWardrobe: ClothingItem[] = [];
 
 // Mock Wardrobe Storage
 vi.mock('../lib/wardrobeStorage', () => ({

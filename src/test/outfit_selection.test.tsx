@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useWeeklyPlan } from '../hooks/useWardrobe';
 import * as wardrobeStorage from '../lib/wardrobeStorage';
 import { wrapper } from './setup';
+import type { ClothingItem, DailyOutfit } from '../types';
 
 vi.mock('../lib/wardrobeStorage');
 
@@ -16,13 +17,13 @@ const mockItem = {
 };
 
 describe('useWeeklyPlan outfit selection', () => {
-    let currentPlan: Record<string, any> = {};
+    let currentPlan: Record<string, DailyOutfit> = {};
 
     beforeEach(() => {
         vi.clearAllMocks();
         currentPlan = {};
-        (wardrobeStorage.loadWeeklyPlan as any).mockImplementation(() => Promise.resolve(currentPlan));
-        (wardrobeStorage.saveWeeklyPlan as any).mockImplementation((plan: any) => {
+        vi.mocked(wardrobeStorage.loadWeeklyPlan).mockImplementation(() => Promise.resolve(currentPlan));
+        vi.mocked(wardrobeStorage.saveWeeklyPlan).mockImplementation((plan: DailyOutfit | any) => {
             currentPlan = plan;
             return Promise.resolve();
         });
@@ -40,7 +41,7 @@ describe('useWeeklyPlan outfit selection', () => {
         await act(async () => {
             await result.current.updateDay(day, (prev) => {
                 const currentItems = prev?.items || [];
-                return { day: 'Martes', date: day, items: [...currentItems, mockItem as any] };
+                return { day: 'Martes', date: day, items: [...currentItems, mockItem as ClothingItem] };
             });
         });
 
@@ -67,7 +68,7 @@ describe('useWeeklyPlan outfit selection', () => {
         // 1. Select item
         await act(async () => {
             await result.current.updateDay(day, () => {
-                return { day: 'Martes', date: day, items: [mockItem as any] };
+                return { day: 'Martes', date: day, items: [mockItem as ClothingItem] };
             });
         });
         await waitFor(() => expect(result.current.plan[day]?.items).toHaveLength(1));
@@ -90,7 +91,7 @@ describe('useWeeklyPlan outfit selection', () => {
         });
 
         // Mock save to be slow
-        (wardrobeStorage.saveWeeklyPlan as any).mockReturnValue(savePromise);
+        vi.mocked(wardrobeStorage.saveWeeklyPlan).mockReturnValue(savePromise);
 
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
         await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -99,7 +100,7 @@ describe('useWeeklyPlan outfit selection', () => {
         
         // Update day
         act(() => {
-            result.current.updateDay(day, { day: 'Martes', date: day, items: [mockItem as any] });
+            result.current.updateDay(day, { day: 'Martes', date: day, items: [mockItem as ClothingItem] });
         });
 
         // Optimistic state should be set immediately (but might need a tick to propagate to hook return)

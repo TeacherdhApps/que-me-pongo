@@ -138,7 +138,11 @@ export async function deleteClothingItem(id: string, imageUrl?: string): Promise
     const userId = await getUserId();
     // Delete local cache instantly
     await db.wardrobe.where('id').equals(id).delete();
-    await db.wardrobe.where('id').equals(Number(id) as any).delete();
+    // Support numeric IDs if they exist (old schema)
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+        await db.wardrobe.where('id').equals(numericId).delete();
+    }
 
     // Background cloud delete
     if (userId && !id.startsWith('local-')) {
@@ -320,7 +324,10 @@ export async function clearAllData(): Promise<void> {
     if (userId) {
         const { data: items } = await supabase.from('wardrobe').select('image').eq('user_id', userId);
         if (items) {
-            for (const item of items) if (item.image) await deleteImage(item.image);
+            for (const item of items) {
+                const img = (item as { image: string }).image;
+                if (img) await deleteImage(img);
+            }
         }
         await supabase.from('wardrobe').delete().eq('user_id', userId);
         await supabase.from('plans').delete().eq('user_id', userId);
