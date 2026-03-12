@@ -28,7 +28,7 @@ describe('useWeeklyPlan persistence', () => {
         const { result } = renderHook(() => useWeeklyPlan(), { wrapper });
         await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-        const newOutfit = { day: 'Martes', items: [{ id: '1', name: 'Item 1', category: 'Superior', color: 'red', image: '', tags: [] }] };
+        const newOutfit = { day: 'Martes', items: [{ id: '1', name: 'Item 1', category: 'Prendas Superiores', color: 'red', image: '', tags: [] }] };
         
         await act(async () => {
             await result.current.updateDay('Martes', newOutfit as any);

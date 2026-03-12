@@ -54,7 +54,7 @@ describe('Calendar Sync', () => {
             {
                 id: '1',
                 name: 'Camisa Blanca',
-                category: 'Superior',
+                category: 'Prendas Superiores',
                 color: 'blanco',
                 image: 'data:image/png;base64,test',
                 tags: [],
@@ -62,7 +62,7 @@ describe('Calendar Sync', () => {
             {
                 id: '2',
                 name: 'Pantalón Negro',
-                category: 'Inferior',
+                category: 'Prendas Inferiores',
                 color: 'negro',
                 image: 'data:image/png;base64,test',
                 tags: [],

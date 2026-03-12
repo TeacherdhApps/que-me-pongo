@@ -47,7 +47,7 @@ describe('TodayOutfitWidget', () => {
                 day: 'Hoy',
                 date: dateKey,
                 items: [
-                    { id: '1', name: 'Camisa', image: 'camisa.jpg', category: 'Superior', color: 'white', tags: [] }
+                    { id: '1', name: 'Camisa', image: 'camisa.jpg', category: 'Prendas Superiores', color: 'white', tags: [] }
                 ]
             }
         };
@@ -84,15 +84,15 @@ describe('TodayOutfitWidget', () => {
         // Use a module-level variable from setup.ts (we need to be able to access it)
         // Actually, we can just use the vi.mocked helper if we want to change implementation
         vi.mocked(wardrobeStorage.loadWardrobe).mockResolvedValue([
-            { id: '1', name: 'Item 1', image: '1.jpg', category: 'Superior', color: 'red', tags: [] },
-            { id: '2', name: 'Item 2', image: '2.jpg', category: 'Superior', color: 'blue', tags: [] }
+            { id: '1', name: 'Item 1', image: '1.jpg', category: 'Prendas Superiores', color: 'red', tags: [] },
+            { id: '2', name: 'Item 2', image: '2.jpg', category: 'Prendas Superiores', color: 'blue', tags: [] }
         ]);
 
         // We might need to wait for wardrobe to load in the editor
-        await waitFor(() => expect(screen.getByText('Superior')).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByText('Prendas Superiores')).toBeInTheDocument());
         
         // Open the Superior section
-        fireEvent.click(screen.getByText('Superior'));
+        fireEvent.click(screen.getByText('Prendas Superiores'));
 
         await waitFor(() => expect(screen.getByAltText('Item 1')).toBeInTheDocument());
 

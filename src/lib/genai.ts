@@ -31,7 +31,7 @@ ${wardrobeContext}
 
 INSTRUCCIONES:
 1. Analiza el clima y la ocasión.
-2. Selecciona UNA combinación lógica de prendas del armario (Top, Bottom, Calzado y opcionalmente Accesorio).
+2. Selecciona UNA combinación lógica de prendas del armario (Abrigo, Top, Bottom, Calzado).
 3. Explica brevemente por qué elegiste estas prendas basándote en la temperatura y el estilo.
 4. Responde en ESPAÑOL con un tono elegante, moderno y motivador.
 5. Usa negritas para resaltar los nombres de las prendas sugeridas.

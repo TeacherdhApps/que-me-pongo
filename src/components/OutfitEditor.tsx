@@ -149,10 +149,10 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
 
                 <div className="overflow-y-auto no-scrollbar pb-12 space-y-3">
                     {([
+                        { key: Categories.OUTERWEAR, icon: 'fa-vest' },
                         { key: Categories.TOP, icon: 'fa-shirt' },
                         { key: Categories.BOTTOM, icon: 'fa-socks' },
                         { key: Categories.SHOES, icon: 'fa-shoe-prints' },
-                        { key: Categories.ACCESSORY, icon: 'fa-gem' },
                     ] as const).map(({ key, icon }) => {
                         const items = wardrobe.filter(item => item.category === key);
                         if (items.length === 0) return null;

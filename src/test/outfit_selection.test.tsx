@@ -10,7 +10,7 @@ vi.mock('../lib/wardrobeStorage');
 const mockItem = {
     id: '1',
     name: 'Test Shirt',
-    category: 'Superior',
+    category: 'Prendas Superiores',
     color: 'White',
     image: 'test.jpg',
     tags: []

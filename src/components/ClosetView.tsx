@@ -8,10 +8,10 @@ import { Categories } from '../types';
 import type { Category, ClothingItem } from '../types';
 
 const categoryLabels: { key: Category; icon: string }[] = [
+    { key: Categories.OUTERWEAR, icon: 'fa-vest' },
     { key: Categories.TOP, icon: 'fa-shirt' },
     { key: Categories.BOTTOM, icon: 'fa-socks' },
     { key: Categories.SHOES, icon: 'fa-shoe-prints' },
-    { key: Categories.ACCESSORY, icon: 'fa-gem' },
 ];
 
 interface ClothingCardProps {

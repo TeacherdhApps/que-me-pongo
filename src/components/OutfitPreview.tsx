@@ -10,9 +10,9 @@ interface OutfitPreviewProps {
 }
 
 export function OutfitPreview({ items, onClose, dayName, dateDisplay }: OutfitPreviewProps) {
+    const outerwear = items.find(itm => itm.category === Categories.OUTERWEAR);
     const superior = items.find(itm => itm.category === Categories.TOP);
     const inferior = items.find(itm => itm.category === Categories.BOTTOM);
-    const accesorio = items.find(itm => itm.category === Categories.ACCESSORY);
     const calzado = items.find(itm => itm.category === Categories.SHOES);
 
     const GridItem = ({ item, label }: { item?: ClothingItem, label: string }) => (
@@ -25,7 +25,7 @@ export function OutfitPreview({ items, onClose, dayName, dateDisplay }: OutfitPr
             ) : (
                 <div className="flex flex-col items-center gap-2 opacity-20">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-dashed border-zinc-300">
-                        <i className={`fas ${label === 'Superior' ? 'fa-tshirt' : label === 'Inferior' ? 'fa-walking' : label === 'Accesorio' ? 'fa-hat-wizard' : 'fa-shoe-prints'}`}></i>
+                        <i className={`fas ${label === Categories.OUTERWEAR ? 'fa-vest' : label === Categories.TOP ? 'fa-shirt' : label === Categories.BOTTOM ? 'fa-socks' : 'fa-shoe-prints'}`}></i>
                     </div>
                     <span className="text-[8px] font-black uppercase tracking-widest text-zinc-300">{label}</span>
                 </div>
@@ -48,12 +48,12 @@ export function OutfitPreview({ items, onClose, dayName, dateDisplay }: OutfitPr
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4">
-                        <GridItem item={superior} label="Superior" />
-                        <GridItem item={inferior} label="Inferior" />
+                        <GridItem item={outerwear} label={Categories.OUTERWEAR} />
+                        <GridItem item={superior} label={Categories.TOP} />
                     </div>
                     <div className="space-y-4">
-                        <GridItem item={accesorio} label="Accesorio" />
-                        <GridItem item={calzado} label="Calzado" />
+                        <GridItem item={inferior} label={Categories.BOTTOM} />
+                        <GridItem item={calzado} label={Categories.SHOES} />
                     </div>
                 </div>
 

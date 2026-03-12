@@ -1,9 +1,9 @@
 
 export const Categories = {
-  TOP: 'Superior',
-  BOTTOM: 'Inferior',
-  SHOES: 'Calzado',
-  ACCESSORY: 'Accesorio'
+  OUTERWEAR: 'Prendas de Abrigo',
+  TOP: 'Prendas Superiores',
+  BOTTOM: 'Prendas Inferiores',
+  SHOES: 'Calzado'
 } as const;
 
 export type Category = (typeof Categories)[keyof typeof Categories];
@@ -11,7 +11,7 @@ export type Category = (typeof Categories)[keyof typeof Categories];
 export interface ClothingItem {
   id: string;          // UUID or timestamp-based unique ID
   name: string;        // e.g., "Camisa blanca Oxford"
-  category: Category;  // TOP | BOTTOM | SHOES | ACCESSORY
+  category: Category;  // OUTERWEAR | TOP | BOTTOM | SHOES
   color: string;       // e.g., "blanco", "azul marino"
   image: string;       // base64 data URL or file path
   thumbnail?: string;  // tiny base64 placeholder for progressive loading
