@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWeather } from '../hooks/useWeather';
 import { useOutfitRecommendation } from '../hooks/useOutfitRecommendation';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ClothingItem, WeeklyPlan, DailyOutfit, Category } from '../types';
 import { Categories } from '../types';
 
@@ -15,7 +14,6 @@ interface OutfitEditorProps {
 }
 
 export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose }: OutfitEditorProps) {
-    const queryClient = useQueryClient();
     const { wardrobe } = useWardrobe();
     const { profile } = useUserProfile();
     const { weather } = useWeather();
@@ -23,20 +21,10 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const [showAI, setShowAI] = useState(false);
 
-    // Track items locally to ensure instant feedback even with rapid clicks
-    // We initialize from the query cache if available, otherwise use initialPlan
-    const [optimisticItems, setOptimisticItems] = useState<ClothingItem[]>(() => {
-        const cached = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']);
-        return cached?.[editingDay.date]?.items || initialPlan[editingDay.date]?.items || [];
-    });
-
-    // Keep optimistic items in sync with cache changes from other sources if needed
-    // although here we are the primary editor.
-    useEffect(() => {
-        const cached = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']);
-        const items = cached?.[editingDay.date]?.items || initialPlan[editingDay.date]?.items || [];
-        setOptimisticItems(items);
-    }, [queryClient, editingDay.date, initialPlan]);
+    // Initialize from initialPlan only once on mount
+    const [optimisticItems, setOptimisticItems] = useState<ClothingItem[]>(
+        () => initialPlan[editingDay.date]?.items || []
+    );
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
