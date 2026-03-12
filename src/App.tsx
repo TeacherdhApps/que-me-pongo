@@ -104,7 +104,7 @@ function App() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
-                <img src={`${import.meta.env.BASE_URL}icon-512.png`} className="w-5 h-5" alt="Q" />
+                <img src={`${import.meta.env.BASE_URL}icon-512.svg`} className="w-5 h-5" alt="Q" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] sm:tracking-[0.4em]">¿Qué me pongo?</h1>

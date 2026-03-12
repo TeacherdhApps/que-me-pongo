@@ -49,7 +49,7 @@ export function AuthView({ onAuthSuccess }: { onAuthSuccess: () => void }) {
             <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-10 w-full max-w-md space-y-10">
                 <div className="text-center space-y-4">
                     <div className="w-16 h-16 bg-black rounded-3xl flex items-center justify-center mx-auto shadow-xl">
-                        <img src={`${import.meta.env.BASE_URL}icon-512.png`} className="w-10 h-10" alt="Logo" />
+                        <img src={`${import.meta.env.BASE_URL}icon-512.svg`} className="w-10 h-10" alt="Logo" />
                     </div>
                     <h2 className="text-3xl font-black uppercase tracking-tighter">
                         {isSignUp ? 'Crear Cuenta' : 'Bienvenido'}
