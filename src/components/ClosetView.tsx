@@ -5,6 +5,7 @@ import { AddItemModal } from './AddItemModal';
 import { StorageHealth } from './StorageHealth';
 import { TodayOutfitWidget } from './TodayOutfitWidget';
 import { Categories } from '../types';
+import { calculateItemLimit } from '../lib/pricing';
 import type { Category, ClothingItem } from '../types';
 
 const categoryLabels: { key: Category; icon: string }[] = [
@@ -174,11 +175,13 @@ export function ClosetView() {
                 )}
             </div>
 
-            {!profile?.isPro && (
-                <div className="mb-12 max-w-md">
-                    <StorageHealth current={wardrobe.length} limit={100} isPro={false} />
-                </div>
-            )}
+            <div className="mb-12 max-w-md">
+                <StorageHealth 
+                    current={wardrobe.length} 
+                    limit={calculateItemLimit(profile?.subscription, profile?.itemPacks)} 
+                    isPro={profile?.subscription?.planId === 'pro' || profile?.subscription?.planId === 'unlimited'} 
+                />
+            </div>
 
             <div className="space-y-4">
                 {categoryLabels.map(({ key, icon }) => {
@@ -257,7 +260,8 @@ export function ClosetView() {
                     onClose={() => setShowModal(false)}
                     onAdd={add}
                     currentCount={wardrobe.length}
-                    isPro={profile?.isPro ?? false}
+                    subscription={profile?.subscription}
+                    itemPacks={profile?.itemPacks}
                 />
             )}
         </div>

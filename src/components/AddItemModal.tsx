@@ -6,15 +6,24 @@ import { uploadImage } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
 import { processBackgroundRemoval, blobToBase64 } from '../lib/backgroundRemoval';
 import { ImageUploadProgress } from './ui/LoadingStates';
+import { calculateItemLimit, getPlanDetails } from '../lib/pricing';
+import type { SubscriptionDetails, ItemPackPurchase } from '../types';
 
 interface AddItemModalProps {
     onClose: () => void;
     onAdd: (item: Omit<ClothingItem, 'id'>) => Promise<ClothingItem>;
     currentCount: number;
-    isPro: boolean;
+    subscription?: SubscriptionDetails;
+    itemPacks?: ItemPackPurchase[];
 }
 
-export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemModalProps) {
+export function AddItemModal({ 
+    onClose, 
+    onAdd, 
+    currentCount,
+    subscription,
+    itemPacks
+}: AddItemModalProps) {
     const [name, setName] = useState('');
     const [category, setCategory] = useState<Category>(Categories.TOP);
     const [image, setImage] = useState<string>('');
@@ -26,12 +35,14 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
     const fileRef = useRef<HTMLInputElement>(null);
     const cameraRef = useRef<HTMLInputElement>(null);
 
-    const ITEM_LIMIT = 100;
-    const isOverLimit = !isPro && currentCount >= ITEM_LIMIT;
+    const itemLimit = calculateItemLimit(subscription, itemPacks);
+    const currentPlan = getPlanDetails(subscription?.planId || 'free');
+    const isOverLimit = currentCount >= itemLimit;
 
     const handleFile = async (file: File) => {
         if (isOverLimit) {
-            alert(`Has alcanzado el límite de ${ITEM_LIMIT} prendas del plan gratuito. ¡Pásate a Pro para añadir piezas ilimitadas!`);
+            const remainingItems = itemLimit - currentCount;
+            alert(`⚠️ Límite de almacenamiento alcanzado\n\nHas usado ${currentCount} de ${itemLimit} prendas disponibles.\n\n${remainingItems <= 0 ? '¡Actualiza tu plan o compra un pack de prendas para seguir agregando!' : `Te quedan ${remainingItems} prendas disponibles.`}`);
             return;
         }
         setIsProcessing(true);
@@ -89,7 +100,7 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
     const submit = async () => {
         if (!name || !image) return;
         if (isOverLimit) {
-            alert('Límite alcanzado. Mejora tu cuenta para añadir más prendas.');
+            alert('⚠️ Límite alcanzado\n\nNo puedes agregar más prendas. Actualiza tu plan o compra un pack de prendas adicional.');
             return;
         }
         setIsUploading(true);
@@ -127,6 +138,29 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
                     <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-50 rounded-full hover:bg-zinc-100 transition-colors">
                         <i className="fas fa-times text-zinc-400"></i>
                     </button>
+                </div>
+
+                {/* Storage Indicator */}
+                <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">
+                            {currentPlan.name}
+                        </span>
+                        <span className={`text-[8px] font-black uppercase tracking-widest ${isOverLimit ? 'text-red-500' : 'text-zinc-400'}`}>
+                            {currentCount} / {itemLimit >= 999999 ? '∞' : itemLimit} prendas
+                        </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <div 
+                            className={`h-full transition-all rounded-full ${isOverLimit ? 'bg-red-500' : 'bg-black'}`}
+                            style={{ width: `${Math.min(100, (currentCount / itemLimit) * 100)}%` }}
+                        />
+                    </div>
+                    {isOverLimit && (
+                        <p className="text-[7px] font-bold text-red-500 uppercase tracking-widest mt-2">
+                            ⚠️ Límite alcanzado - Actualiza tu plan
+                        </p>
+                    )}
                 </div>
 
                 <div

@@ -7,6 +7,9 @@ import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStora
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { StorageHealth } from './StorageHealth';
+import { calculateItemLimit, getPlanDetails, ITEM_PACKS, getPlanBadgeProps } from '../lib/pricing';
+import type { PlanId } from '../lib/pricing';
+import { PricingModal } from './PricingModal';
 
 export function SettingsView() {
     const queryClient = useQueryClient();
@@ -14,7 +17,36 @@ export function SettingsView() {
     const { wardrobe } = useWardrobe();
     const { isInstallable, installApp } = usePWAInstall();
     const [importStatus, setImportStatus] = useState<string | null>(null);
+    const [showPricingModal, setShowPricingModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const itemLimit = calculateItemLimit(profile.subscription, profile.itemPacks);
+    const currentPlanId: PlanId = profile.subscription?.planId || 'free';
+    const currentPlan = getPlanDetails(currentPlanId);
+
+    const handleUpgrade = async (planId: PlanId) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert('Por favor inicia sesión para realizar la compra.');
+            return;
+        }
+        
+        const plan = getPlanDetails(planId);
+        const checkoutUrl = `https://quemepongo.lemonsqueezy.com/checkout/buy/${plan.lemonSqueezyVariantId}?checkout[custom][user_id]=${user.id}`;
+        window.open(checkoutUrl, '_blank');
+    };
+
+    const handleItemPackPurchase = async (packId: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert('Por favor inicia sesión para realizar la compra.');
+            return;
+        }
+        
+        const pack = ITEM_PACKS[packId as keyof typeof ITEM_PACKS];
+        const checkoutUrl = `https://quemepongo.lemonsqueezy.com/checkout/buy/${pack.lemonSqueezyVariantId}?checkout[custom][user_id]=${user.id}`;
+        window.open(checkoutUrl, '_blank');
+    };
 
     const handleReset = async () => {
         if (window.confirm('⚠️ ¿Estás COMPLETAMENTE seguro? Esto borrará todas tus prendas, planes y perfil permanentemente de la nube y este dispositivo.')) {
@@ -152,52 +184,86 @@ export function SettingsView() {
             {/* Plan & Storage */}
             <div className="bg-zinc-50 rounded-[3rem] p-10 border border-zinc-100 mb-8 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8">
-                    <i className={`fas ${profile.isPro ? 'fa-gem text-amber-500' : 'fa-seedling text-zinc-300'} text-4xl opacity-20`}></i>
+                    <i className={`fas ${currentPlanId === 'free' ? 'fa-seedling text-zinc-300' : currentPlanId === 'pro' ? 'fa-gem text-amber-500' : 'fa-crown text-purple-500'} text-4xl opacity-20`}></i>
                 </div>
 
                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-8">Plan y Almacenamiento</h3>
 
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                {/* Current Plan Display */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
                             <span className="text-2xl font-black uppercase tracking-tighter">
-                                {profile.isPro ? 'Plan Premium' : 'Plan Gratuito'}
+                                {currentPlan.name}
                             </span>
-                            {profile.isPro && (
-                                <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">PRO</span>
-                            )}
+                            <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest ${getPlanBadgeProps(currentPlanId).className}`}>
+                                <i className={`fas ${getPlanBadgeProps(currentPlanId).icon} mr-1`}></i>
+                                {getPlanBadgeProps(currentPlanId).label}
+                            </span>
                         </div>
                         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">
-                            {wardrobe.length} de {profile.isPro ? '∞' : '100'} prendas utilizadas
+                            {wardrobe.length} de {itemLimit >= 999999 ? '∞' : itemLimit} prendas utilizadas
                         </p>
                     </div>
 
-                    {!profile.isPro ? (
+                    {currentPlanId === 'free' ? (
                         <button
                             className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
-                            onClick={async () => {
-                                const { data: { user } } = await supabase.auth.getUser();
-                                if (!user) {
-                                    alert('Por favor inicia sesión para realizar la compra.');
-                                    return;
-                                }
-                                // Lemon Squeezy Checkout URL with custom user_id data
-                                const LS_CHECKOUT_URL = `https://quemepongo.lemonsqueezy.com/checkout/buy/2131fda6-1821-42d0-a7a0-c9eac6dd29ae?checkout[custom][user_id]=${user.id}`;
-                                window.open(LS_CHECKOUT_URL, '_blank');
-                            }}
+                            onClick={() => setShowPricingModal(true)}
                         >
-                            Pasar a Pro
+                            Ver Planes
                         </button>
                     ) : (
-                        <div className="bg-zinc-100 px-6 py-4 rounded-full text-zinc-400 font-black text-[10px] uppercase tracking-widest">
-                            Suscripción Activa
+                        <div className="flex items-center gap-3">
+                            <div className="bg-zinc-100 px-6 py-4 rounded-full text-zinc-400 font-black text-[10px] uppercase tracking-widest">
+                                {currentPlanId === 'pro' ? 'Plan Pro Activo' : 'Plan Ilimitado'}
+                            </div>
+                            {currentPlanId === 'pro' && (
+                                <button
+                                    onClick={() => handleUpgrade('unlimited')}
+                                    className="bg-purple-600 text-white px-6 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
+                                >
+                                    Mejorar a Ilimitado
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
 
-                <div className="mt-10">
-                    <StorageHealth current={wardrobe.length} limit={100} isPro={profile.isPro ?? false} />
+                <div className="mb-10">
+                    <StorageHealth current={wardrobe.length} limit={itemLimit} isPro={currentPlanId !== 'free'} />
                 </div>
+
+                {/* Item Packs Section */}
+                {currentPlanId !== 'free' && (
+                    <div className="border-t border-zinc-200 pt-8">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-6">
+                            ¿Necesitas más espacio? Compra packs adicionales
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {Object.values(ITEM_PACKS).map(pack => (
+                                <button
+                                    key={pack.id}
+                                    onClick={() => handleItemPackPurchase(pack.id)}
+                                    className="bg-white border-2 border-zinc-200 rounded-2xl p-6 text-left hover:border-black hover:scale-105 transition-all group"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-black text-zinc-600">
+                                            {pack.name}
+                                        </span>
+                                        <i className="fas fa-plus-circle text-zinc-300 group-hover:text-black"></i>
+                                    </div>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                                        {pack.description}
+                                    </p>
+                                    <p className="text-lg font-black text-black">
+                                        ${pack.price} <span className="text-[8px] font-bold text-zinc-400">MXN</span>
+                                    </p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Export / Import */}
@@ -267,6 +333,14 @@ export function SettingsView() {
                     )}
                 </div>
             </div>
+
+            {/* Pricing Modal */}
+            {showPricingModal && (
+                <PricingModal 
+                    onClose={() => setShowPricingModal(false)}
+                    currentPlanId={currentPlanId}
+                />
+            )}
         </div>
     );
 }
