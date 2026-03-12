@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWeather } from '../hooks/useWeather';
@@ -21,10 +21,30 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const [showAI, setShowAI] = useState(false);
 
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
     // Initialize from initialPlan only once on mount
     const [optimisticItems, setOptimisticItems] = useState<ClothingItem[]>(
         () => initialPlan[editingDay.date]?.items || []
     );
+
+    // Sync optimistic state when plan data arrives after mount
+    // (e.g. async query hadn't settled when editor opened)
+    const [hasMadeLocalChange, setHasMadeLocalChange] = useState(false);
+    useEffect(() => {
+        if (hasMadeLocalChange) return; // don't overwrite user's in-progress edits
+        const planItems = initialPlan[editingDay.date]?.items;
+        if (planItems && planItems.length > 0 && optimisticItems.length === 0) {
+            setOptimisticItems(planItems);
+        }
+    }, [initialPlan, editingDay.date, hasMadeLocalChange, optimisticItems.length]);
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
@@ -36,6 +56,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     };
 
     const toggleItemInDay = (item: ClothingItem) => {
+        setHasMadeLocalChange(true);
         setOptimisticItems(prev => {
             const isSelected = prev.find(i => String(i.id) === String(item.id));
             const nextItems = isSelected

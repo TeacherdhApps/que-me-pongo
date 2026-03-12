@@ -23,6 +23,13 @@ function wmoCodeToCondition(code: number): string {
   return map[code] ?? 'Desconocido';
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return '¡Buenos días!';
+  if (hour >= 12 && hour < 20) return '¡Buenas tardes!';
+  return '¡Buenas noches!';
+}
+
 function App() {
   const queryClient = useQueryClient();
   const { profile } = useUserProfile();
@@ -168,7 +175,7 @@ function App() {
             {view !== 'settings' && (
               <div className="mb-8 animate-fade">
                 <h2 className="text-xl font-black uppercase tracking-widest text-zinc-800">
-                  ¡Buen día! {profile?.name && <span className="text-zinc-400">{profile.name}</span>}
+                  {getGreeting()} {profile?.name && <span className="text-zinc-400">{profile.name}</span>}
                 </h2>
               </div>
             )}

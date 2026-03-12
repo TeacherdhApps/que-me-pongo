@@ -149,7 +149,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
             <div className="flex justify-between items-end mb-12">
                 <div>
                     <h2 className="text-4xl font-black uppercase tracking-tighter">Itinerario Semanal</h2>
-                    <div className="flex gap-4 mt-2">
+                    <div className="flex gap-4 mt-2 items-center">
                         <button
                             onClick={() => changeWeek(-1)}
                             className="bg-black text-white w-6 h-6 rounded-full flex items-center justify-center text-[8px] hover:scale-110 transition-transform"
@@ -162,6 +162,14 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                         >
                             →
                         </button>
+                        {formatDateKey(currentDate) !== formatDateKey(new Date()) && (
+                            <button
+                                onClick={() => setCurrentDate(new Date())}
+                                className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-black text-white rounded-full hover:scale-105 transition-transform animate-fade"
+                            >
+                                Hoy
+                            </button>
+                        )}
                     </div>
                     <div className="flex gap-4 mt-4">
                         <button
