@@ -12,7 +12,7 @@ export function LoadingSpinner({ size = 'md', text, fullScreen = false }: Loadin
     };
 
     const spinner = (
-        <div className="flex flex-col items-center justify-center gap-3">
+        <div className="flex flex-col items-center justify-center gap-3" data-testid="loading-spinner">
             <i className={`fas fa-circle-notch fa-spin ${sizeClasses[size]} text-zinc-300`}></i>
             {text && (
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 animate-pulse">
@@ -144,7 +144,7 @@ export function ImageUploadProgress({ isUploading, progress }: ImageUploadProgre
 
 export function SkeletonCard() {
     return (
-        <div className="bg-white rounded-3xl p-4 border border-zinc-100 animate-pulse">
+        <div className="bg-white rounded-3xl p-4 border border-zinc-100 animate-pulse" data-testid="skeleton-card">
             <div className="aspect-square bg-zinc-100 rounded-2xl mb-3"></div>
             <div className="h-4 bg-zinc-100 rounded-full w-3/4 mb-2"></div>
             <div className="h-3 bg-zinc-100 rounded-full w-1/2"></div>
