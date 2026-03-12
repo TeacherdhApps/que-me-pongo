@@ -153,8 +153,7 @@ export function useWeeklyPlan() {
     const updateDayMutation = useMutation({
         mutationKey: ['update-weekly-plan'],
         mutationFn: async ({ day, nextOutfit }: { day: string; nextOutfit: DailyOutfit }) => {
-            // By the time this runs, the cache might have been updated multiple times optimistically.
-            // We want to save the ABSOLUTE LATEST state of the whole plan.
+            // Read the latest optimistic cache and merge our change into it
             const latestPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
             const fullPlan = { ...latestPlan, [day]: nextOutfit };
             return saveWeeklyPlan(fullPlan);
@@ -163,7 +162,7 @@ export function useWeeklyPlan() {
             await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
             const previousPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']);
 
-            // OPTIMISTIC UPDATE: Use functional update to ensure we never base our change on stale cache.
+            // Optimistic update: immediately reflect in UI
             queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => ({
                 ...old,
                 [day]: nextOutfit
@@ -176,14 +175,18 @@ export function useWeeklyPlan() {
                 queryClient.setQueryData(['weekly-plan'], context.previousPlan);
             }
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
+        onSuccess: () => {
+            // Delay the refetch to give Supabase time to commit the write.
+            // This prevents the immediate refetch from returning stale cloud data
+            // that overwrites our optimistic update.
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
+            }, 2000);
         },
     });
 
     const updateDay = useCallback(async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
         return planQueue.enqueue(async () => {
-            // Get the absolute latest data from the cache right now
             const currentCache = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
             const oldOutfit = currentCache[day] || { day: day, items: [], date: day };
             const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;

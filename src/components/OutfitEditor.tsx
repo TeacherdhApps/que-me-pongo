@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWeather } from '../hooks/useWeather';
@@ -30,21 +30,26 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
 
-    // Initialize from initialPlan only once on mount
-    const [optimisticItems, setOptimisticItems] = useState<ClothingItem[]>(
+    // The editor OWNS the selection state completely.
+    // We initialize from initialPlan and never let external re-renders overwrite it.
+    const [selectedItems, setSelectedItems] = useState<ClothingItem[]>(
         () => initialPlan[editingDay.date]?.items || []
     );
 
-    // Sync optimistic state when plan data arrives after mount
-    // (e.g. async query hadn't settled when editor opened)
-    const [hasMadeLocalChange, setHasMadeLocalChange] = useState(false);
+    // Track whether the user has made any edits so we know to save on close
+    const hasChanges = useRef(false);
+
+    // If the plan data loads AFTER we opened (async query), seed our state once.
+    // This handles the case where the editor opens before the query settles.
+    const didSeedFromPlan = useRef(false);
     useEffect(() => {
-        if (hasMadeLocalChange) return; // don't overwrite user's in-progress edits
+        if (didSeedFromPlan.current) return;
         const planItems = initialPlan[editingDay.date]?.items;
-        if (planItems && planItems.length > 0 && optimisticItems.length === 0) {
-            setOptimisticItems(planItems);
+        if (planItems && planItems.length > 0 && selectedItems.length === 0 && !hasChanges.current) {
+            setSelectedItems(planItems);
+            didSeedFromPlan.current = true;
         }
-    }, [initialPlan, editingDay.date, hasMadeLocalChange, optimisticItems.length]);
+    }, [initialPlan, editingDay.date, selectedItems.length]);
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
@@ -56,22 +61,26 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     };
 
     const toggleItemInDay = (item: ClothingItem) => {
-        setHasMadeLocalChange(true);
-        setOptimisticItems(prev => {
-            const isSelected = prev.find(i => String(i.id) === String(item.id));
-            const nextItems = isSelected
+        hasChanges.current = true;
+        setSelectedItems(prev => {
+            const isSelected = prev.some(i => String(i.id) === String(item.id));
+            return isSelected
                 ? prev.filter(i => String(i.id) !== String(item.id))
                 : [...prev, item];
+        });
+    };
 
-            // Trigger the mutation with the new items
+    // Save selection ONCE when the editor closes, not on every toggle.
+    // This eliminates race conditions from rapid-fire optimistic mutations.
+    const handleClose = () => {
+        if (hasChanges.current) {
             updateDay(editingDay.date, {
                 day: editingDay.name,
                 date: editingDay.date,
-                items: nextItems
+                items: selectedItems
             });
-
-            return nextItems;
-        });
+        }
+        onClose();
     };
 
     return (
@@ -105,7 +114,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                             </button>
                         )}
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform"
                         >
                             Listo
@@ -179,7 +188,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                                 {isOpen && (
                                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 px-2 animate-fade py-4">
                                         {items.map(item => {
-                                            const active = optimisticItems.find(i => String(i.id) === String(item.id));
+                                            const active = selectedItems.some(i => String(i.id) === String(item.id));
                                             return (
                                                 <button
                                                     key={item.id}
