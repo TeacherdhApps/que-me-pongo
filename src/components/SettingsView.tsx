@@ -1,15 +1,11 @@
-
 import { useState, useRef } from 'react';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
-import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { StorageHealth } from './StorageHealth';
-import { calculateItemLimit, getPlanDetails, ITEM_PACKS, getPlanBadgeProps } from '../lib/pricing';
-import type { PlanId } from '../lib/pricing';
-import { PricingModal } from './PricingModal';
+import { FREE_ITEM_LIMIT } from '../lib/pricing';
 
 export function SettingsView() {
     const queryClient = useQueryClient();
@@ -17,36 +13,7 @@ export function SettingsView() {
     const { wardrobe } = useWardrobe();
     const { isInstallable, installApp } = usePWAInstall();
     const [importStatus, setImportStatus] = useState<string | null>(null);
-    const [showPricingModal, setShowPricingModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const itemLimit = calculateItemLimit(profile.subscription, profile.itemPacks);
-    const currentPlanId: PlanId = profile.subscription?.planId || 'free';
-    const currentPlan = getPlanDetails(currentPlanId);
-
-    const handleUpgrade = async (planId: PlanId) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            alert('Por favor inicia sesión para realizar la compra.');
-            return;
-        }
-        
-        const plan = getPlanDetails(planId);
-        const checkoutUrl = `https://quemepongo.lemonsqueezy.com/checkout/buy/${plan.lemonSqueezyVariantId}?checkout[custom][user_id]=${user.id}`;
-        window.open(checkoutUrl, '_blank');
-    };
-
-    const handleItemPackPurchase = async (packId: string) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            alert('Por favor inicia sesión para realizar la compra.');
-            return;
-        }
-        
-        const pack = ITEM_PACKS[packId as keyof typeof ITEM_PACKS];
-        const checkoutUrl = `https://quemepongo.lemonsqueezy.com/checkout/buy/${pack.lemonSqueezyVariantId}?checkout[custom][user_id]=${user.id}`;
-        window.open(checkoutUrl, '_blank');
-    };
 
     const handleReset = async () => {
         if (window.confirm('⚠️ ¿Estás COMPLETAMENTE seguro? Esto borrará todas tus prendas, planes y perfil permanentemente de la nube y este dispositivo.')) {
@@ -108,7 +75,6 @@ export function SettingsView() {
                 <p className="text-[10px] text-zinc-400 mb-8">Todos los campos son opcionales.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Name */}
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Nombre</label>
                         <input
@@ -120,7 +86,6 @@ export function SettingsView() {
                         />
                     </div>
 
-                    {/* Sex */}
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Sexo</label>
                         <div className="flex gap-3">
@@ -139,7 +104,6 @@ export function SettingsView() {
                         </div>
                     </div>
 
-                    {/* Age */}
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Edad</label>
                         <input
@@ -153,7 +117,6 @@ export function SettingsView() {
                         />
                     </div>
 
-                    {/* Weight */}
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Peso (kg)</label>
                         <input
@@ -166,7 +129,6 @@ export function SettingsView() {
                         />
                     </div>
 
-                    {/* Height */}
                     <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Estatura (cm)</label>
                         <input
@@ -184,86 +146,45 @@ export function SettingsView() {
             {/* Plan & Storage */}
             <div className="bg-zinc-50 rounded-[3rem] p-10 border border-zinc-100 mb-8 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8">
-                    <i className={`fas ${currentPlanId === 'free' ? 'fa-seedling text-zinc-300' : currentPlanId === 'pro' ? 'fa-gem text-amber-500' : 'fa-crown text-purple-500'} text-4xl opacity-20`}></i>
+                    <i className="fas fa-seedling text-4xl opacity-20 text-zinc-300"></i>
                 </div>
 
                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-8">Plan y Almacenamiento</h3>
 
-                {/* Current Plan Display */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl font-black uppercase tracking-tighter">
-                                {currentPlan.name}
-                            </span>
-                            <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest ${getPlanBadgeProps(currentPlanId).className}`}>
-                                <i className={`fas ${getPlanBadgeProps(currentPlanId).icon} mr-1`}></i>
-                                {getPlanBadgeProps(currentPlanId).label}
-                            </span>
-                        </div>
-                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">
-                            {wardrobe.length} de {itemLimit >= 999999 ? '∞' : itemLimit} prendas utilizadas
-                        </p>
-                    </div>
-
-                    {currentPlanId === 'free' ? (
-                        <button
-                            className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
-                            onClick={() => setShowPricingModal(true)}
-                        >
-                            Ver Planes
-                        </button>
-                    ) : (
-                        <div className="flex items-center gap-3">
-                            <div className="bg-zinc-100 px-6 py-4 rounded-full text-zinc-400 font-black text-[10px] uppercase tracking-widest">
-                                {currentPlanId === 'pro' ? 'Plan Pro Activo' : 'Plan Ilimitado'}
-                            </div>
-                            {currentPlanId === 'pro' && (
-                                <button
-                                    onClick={() => handleUpgrade('unlimited')}
-                                    className="bg-purple-600 text-white px-6 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
-                                >
-                                    Mejorar a Ilimitado
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-
                 <div className="mb-10">
-                    <StorageHealth current={wardrobe.length} limit={itemLimit} isPro={currentPlanId !== 'free'} />
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl font-black uppercase tracking-tighter">
+                            Plan Gratuito
+                        </span>
+                        <span className="bg-zinc-100 text-zinc-600 text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
+                            FREE
+                        </span>
+                    </div>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-6">
+                        {wardrobe.length} de {FREE_ITEM_LIMIT} prendas utilizadas
+                    </p>
+
+                    <StorageHealth current={wardrobe.length} limit={FREE_ITEM_LIMIT} isPro={false} />
                 </div>
 
-                {/* Item Packs Section */}
-                {currentPlanId !== 'free' && (
-                    <div className="border-t border-zinc-200 pt-8">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-6">
-                            ¿Necesitas más espacio? Compra packs adicionales
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {Object.values(ITEM_PACKS).map(pack => (
-                                <button
-                                    key={pack.id}
-                                    onClick={() => handleItemPackPurchase(pack.id)}
-                                    className="bg-white border-2 border-zinc-200 rounded-2xl p-6 text-left hover:border-black hover:scale-105 transition-all group"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[11px] font-black uppercase tracking-widest group-hover:text-black text-zinc-600">
-                                            {pack.name}
-                                        </span>
-                                        <i className="fas fa-plus-circle text-zinc-300 group-hover:text-black"></i>
-                                    </div>
-                                    <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-3">
-                                        {pack.description}
-                                    </p>
-                                    <p className="text-lg font-black text-black">
-                                        ${pack.price} <span className="text-[8px] font-bold text-zinc-400">MXN</span>
-                                    </p>
-                                </button>
-                            ))}
+                {/* Info Box */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-[2.5rem] p-8 border-2 border-green-100">
+                    <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i className="fas fa-check text-xl text-green-600"></i>
+                        </div>
+                        <div>
+                            <h4 className="text-base font-black uppercase tracking-tighter mb-2 text-green-800">
+                                200 prendas gratis
+                            </h4>
+                            <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest leading-relaxed">
+                                Disfruta de tu armario virtual con hasta 200 prendas sin costo alguno.
+                                <br />
+                                ¡Suficiente espacio para tu estilo!
+                            </p>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Export / Import */}
@@ -333,14 +254,6 @@ export function SettingsView() {
                     )}
                 </div>
             </div>
-
-            {/* Pricing Modal */}
-            {showPricingModal && (
-                <PricingModal 
-                    onClose={() => setShowPricingModal(false)}
-                    currentPlanId={currentPlanId}
-                />
-            )}
         </div>
     );
 }

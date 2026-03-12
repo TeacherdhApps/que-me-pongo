@@ -5,7 +5,7 @@ import { AddItemModal } from './AddItemModal';
 import { StorageHealth } from './StorageHealth';
 import { TodayOutfitWidget } from './TodayOutfitWidget';
 import { Categories } from '../types';
-import { calculateItemLimit } from '../lib/pricing';
+import { FREE_ITEM_LIMIT } from '../lib/pricing';
 import type { Category, ClothingItem } from '../types';
 
 const categoryLabels: { key: Category; icon: string }[] = [
@@ -93,7 +93,7 @@ ClothingCard.displayName = 'ClothingCard';
 
 export function ClosetView() {
     const { wardrobe, isLoading, add, remove, bulkRemove } = useWardrobe();
-    const { profile } = useUserProfile();
+    useUserProfile();
     const [showModal, setShowModal] = useState(false);
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -178,8 +178,8 @@ export function ClosetView() {
             <div className="mb-12 max-w-md">
                 <StorageHealth 
                     current={wardrobe.length} 
-                    limit={calculateItemLimit(profile?.subscription, profile?.itemPacks)} 
-                    isPro={profile?.subscription?.planId === 'pro' || profile?.subscription?.planId === 'unlimited'} 
+                    limit={FREE_ITEM_LIMIT} 
+                    isPro={false} 
                 />
             </div>
 
@@ -260,8 +260,6 @@ export function ClosetView() {
                     onClose={() => setShowModal(false)}
                     onAdd={add}
                     currentCount={wardrobe.length}
-                    subscription={profile?.subscription}
-                    itemPacks={profile?.itemPacks}
                 />
             )}
         </div>

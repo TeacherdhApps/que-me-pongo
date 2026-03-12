@@ -37,21 +37,6 @@ export interface DailyOutfit {
 
 export type WeeklyPlan = Record<string, DailyOutfit>;
 
-export interface SubscriptionDetails {
-  planId: 'free' | 'pro' | 'unlimited';
-  startDate?: string;
-  endDate?: string;
-  lemonSqueezyOrderId?: string;
-  status?: 'active' | 'cancelled' | 'expired' | 'trialing';
-}
-
-export interface ItemPackPurchase {
-  packId: string;
-  purchaseDate: string;
-  lemonSqueezyOrderId: string;
-  itemsAdded: number;
-}
-
 export interface UserProfile {
   name?: string;
   sex?: string;
@@ -59,6 +44,4 @@ export interface UserProfile {
   weight?: number;    // kg
   height?: number;    // cm
   isPro?: boolean;
-  subscription?: SubscriptionDetails;
-  itemPacks?: ItemPackPurchase[];
 }
