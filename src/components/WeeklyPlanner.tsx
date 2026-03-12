@@ -178,6 +178,22 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                         </button>
                     </div>
                 </div>
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={handleGoogleCalendar}
+                        className="text-[9px] font-black uppercase tracking-widest px-4 py-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-colors flex items-center gap-2"
+                        title="Exportar a Google Calendar"
+                    >
+                        <i className="fab fa-google"></i> Calendar
+                    </button>
+                    <button
+                        onClick={handleExportCalendar}
+                        className="text-[9px] font-black uppercase tracking-widest px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full hover:bg-zinc-200 transition-colors flex items-center gap-2"
+                        title="Descargar archivo ICS"
+                    >
+                        <i className="fas fa-calendar-download"></i> Exportar ICS
+                    </button>
+                </div>
             </div>
 
             {isLoading ? (
