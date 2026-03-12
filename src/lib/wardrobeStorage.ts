@@ -30,22 +30,31 @@ function base64ToFile(base64: string, filename: string): File {
 
 import { resizeImage, generateThumbnail } from './imageResizer';
 
-export async function uploadImage(base64Image: string, userId: string): Promise<string> {
+export async function uploadImage(
+    base64Image: string,
+    userId: string,
+    onProgress?: (progress: number) => void
+): Promise<string> {
+    onProgress?.(10);
     const optimizedBase64 = await resizeImage(base64Image, 1200, 1200, 0.7);
+    onProgress?.(40);
     const ext = optimizedBase64.startsWith('data:image/png') ? 'png' : 'jpg';
     const filename = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
     const file = base64ToFile(optimizedBase64, filename);
 
+    onProgress?.(60);
     const { error } = await supabase.storage
         .from(IMAGE_BUCKET)
         .upload(filename, file, { contentType: file.type, upsert: false });
 
     if (error) throw error;
 
+    onProgress?.(90);
     const { data: urlData } = supabase.storage
         .from(IMAGE_BUCKET)
         .getPublicUrl(filename);
 
+    onProgress?.(100);
     return urlData.publicUrl;
 }
 

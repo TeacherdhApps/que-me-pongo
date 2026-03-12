@@ -5,6 +5,7 @@ import { resizeImage } from '../lib/imageResizer';
 import { uploadImage } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
 import { processBackgroundRemoval, blobToBase64 } from '../lib/backgroundRemoval';
+import { ImageUploadProgress } from './ui/LoadingStates';
 
 interface AddItemModalProps {
     onClose: () => void;
@@ -21,6 +22,7 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
     const [isRemovingBackground, setIsRemovingBackground] = useState(false);
     const [removeBG, setRemoveBG] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
     const fileRef = useRef<HTMLInputElement>(null);
     const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -91,11 +93,12 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
             return;
         }
         setIsUploading(true);
+        setUploadProgress(0);
         try {
             let finalImage = image;
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                finalImage = await uploadImage(image, user.id);
+                finalImage = await uploadImage(image, user.id, setUploadProgress);
             }
 
             await onAdd({
@@ -111,10 +114,12 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
             alert('Error al guardar la prenda. Por favor intenta de nuevo.');
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
         }
     };
 
     return (
+        <>
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/90 backdrop-blur-xl animate-fade">
             <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-10 w-full max-w-lg space-y-8">
                 <div className="flex justify-between items-center">
@@ -242,5 +247,7 @@ export function AddItemModal({ onClose, onAdd, currentCount, isPro }: AddItemMod
                 </button>
             </div>
         </div>
+        {isUploading && <ImageUploadProgress isUploading={isUploading} progress={uploadProgress} />}
+        </>
     );
 }

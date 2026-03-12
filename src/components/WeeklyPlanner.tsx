@@ -3,6 +3,7 @@ import { useState, memo } from 'react';
 import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
+import { downloadWeeklyOutfits, openGoogleCalendar } from '../lib/calendarSync';
 import type { ClothingItem } from '../types';
 
 interface DayInfo {
@@ -126,6 +127,21 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         const nextDate = new Date(currentDate);
         nextDate.setDate(currentDate.getDate() + (offset * 7));
         setCurrentDate(nextDate);
+    };
+
+    const handleExportCalendar = () => {
+        const outfits = weekDays.map(day => plan[day.date] || { day: day.name, date: day.date, items: [] });
+        downloadWeeklyOutfits(outfits);
+    };
+
+    const handleGoogleCalendar = () => {
+        // Export today's outfit or first available
+        const today = weekDays.find(d => d.date === formatDateKey(new Date()));
+        if (today && plan[today.date]?.items.length > 0) {
+            openGoogleCalendar(plan[today.date]);
+        } else {
+            alert('No hay un outfit planificado para hoy. Planifica un día primero.');
+        }
     };
 
     return (

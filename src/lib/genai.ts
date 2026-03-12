@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
+import { VITE_GEMINI_API_KEY } from './env';
 import type { ClothingItem, WeatherData } from '../types';
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const API_KEY = VITE_GEMINI_API_KEY;
 
 export async function* streamOutfitRecommendation(
     wardrobe: ClothingItem[],
