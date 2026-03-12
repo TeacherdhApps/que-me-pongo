@@ -236,7 +236,7 @@ export function SettingsView() {
 
                 <div className="flex flex-col items-center gap-6">
                     <div className="w-20 h-20 bg-black rounded-3xl flex items-center justify-center shadow-xl">
-                        <img src={`${import.meta.env.BASE_URL}icon-192.svg`} className="w-12 h-12" alt="App Icon" />
+                        <img src={`${import.meta.env.BASE_URL}icon-512.png`} className="w-12 h-12" alt="App Icon" />
                     </div>
                     {isInstallable ? (
                         <button
