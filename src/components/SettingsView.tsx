@@ -175,10 +175,10 @@ export function SettingsView() {
                         </div>
                         <div>
                             <h4 className="text-base font-black uppercase tracking-tighter mb-2 text-green-800">
-                                200 prendas gratis
+                                300 prendas gratis
                             </h4>
                             <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest leading-relaxed">
-                                Disfruta de tu armario virtual con hasta 200 prendas sin costo alguno.
+                                Disfruta de tu armario virtual con hasta 300 prendas sin costo alguno.
                                 <br />
                                 ¡Suficiente espacio para tu estilo!
                             </p>

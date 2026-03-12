@@ -6,13 +6,13 @@ import { wrapper } from './setup';
 vi.mock('../hooks/useWardrobe');
 vi.mock('../hooks/useUserProfile');
 
-describe('AddItemModal - Free Tier (200 items)', () => {
+describe('AddItemModal - Free Tier (300 items)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.stubGlobal('alert', vi.fn());
     });
 
-    it('should allow up to 200 items for free users', () => {
+    it('should allow up to 300 items for free users', () => {
         render(<AddItemModal
             onClose={vi.fn()}
             onAdd={vi.fn()}
@@ -23,18 +23,18 @@ describe('AddItemModal - Free Tier (200 items)', () => {
         expect(nameInput).toBeInTheDocument();
     });
 
-    it('should block adding items when reaching 200 item limit', () => {
+    it('should block adding items when reaching 300 item limit', () => {
         render(<AddItemModal
             onClose={vi.fn()}
             onAdd={vi.fn()}
-            currentCount={200}
+            currentCount={300}
         />, { wrapper });
 
         const nameInput = screen.getByPlaceholderText(/Ej. Camisa Oxford/i);
         fireEvent.change(nameInput, { target: { value: 'Test Shirt' } });
     });
 
-    it('should show storage indicator with 200 item limit', () => {
+    it('should show storage indicator with 300 item limit', () => {
         render(<AddItemModal
             onClose={vi.fn()}
             onAdd={vi.fn()}
@@ -42,6 +42,6 @@ describe('AddItemModal - Free Tier (200 items)', () => {
         />, { wrapper });
 
         expect(screen.getByText(/Plan Gratuito/i)).toBeInTheDocument();
-        expect(screen.getByText(/50 \/ 200 prendas/i)).toBeInTheDocument();
+        expect(screen.getByText(/50 \/ 300 prendas/i)).toBeInTheDocument();
     });
 });

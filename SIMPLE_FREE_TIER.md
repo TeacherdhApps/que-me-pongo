@@ -2,7 +2,7 @@
 
 ## 📦 Current Pricing Model
 
-**200 items FREE - No payments, no subscriptions**
+**300 items FREE - No payments, no subscriptions**
 
 That's it! Simple and straightforward.
 
@@ -10,7 +10,7 @@ That's it! Simple and straightforward.
 
 ## ✨ Features
 
-- ✅ **200 items** - Completely free
+- ✅ **300 items** - Completely free
 - ✅ **No payment required** - Forever free
 - ✅ **No subscriptions** - No credit card needed
 - ✅ **No webhooks** - No backend payment processing
@@ -30,7 +30,7 @@ That's it! Simple and straightforward.
 - ❌ Complex pricing tiers
 
 ### Simplified
-- ✅ Single limit: 200 items
+- ✅ Single limit: 300 items
 - ✅ Simple storage indicator
 - ✅ Clean SettingsView
 - ✅ No payment-related database columns
@@ -49,7 +49,7 @@ Run this in Supabase SQL Editor:
 
 This will:
 - Remove old payment/subscription columns
-- Set simple 200 item limit
+- Set simple 300 item limit
 - Clean up database structure
 
 ### That's It!
@@ -63,11 +63,11 @@ No variant IDs to manage.
 ## 💡 Item Limit
 
 ```
-All Users: 200 items FREE
+All Users: 300 items FREE
 ```
 
 **Storage Indicator shows:**
-- Current usage: "X de 200 prendas utilizadas"
+- Current usage: "X de 300 prendas utilizadas"
 - Progress bar visualization
 - Red warning when limit reached
 
@@ -77,15 +77,15 @@ All Users: 200 items FREE
 
 ### Settings View
 - Shows "Plan Gratuito" badge
-- Displays current usage out of 200 items
-- Green info box: "200 prendas gratis"
+- Displays current usage out of 300 items
+- Green info box: "300 prendas gratis"
 - No purchase buttons
 - No upgrade options
 
 ### Add Item Modal
 - Simple storage indicator
 - Shows "Plan Gratuito"
-- Progress bar to 200 items
+- Progress bar to 300 items
 - Warning when limit reached
 
 ---
@@ -108,9 +108,9 @@ profiles table:
 
 ## 🧪 Tests
 
-All tests updated for 200 item limit:
-- `pricing-utils.test.ts` - Tests FREE_ITEM_LIMIT = 200
-- `pricing.test.tsx` - Tests AddItemModal with 200 limit
+All tests updated for 300 item limit:
+- `pricing-utils.test.ts` - Tests FREE_ITEM_LIMIT = 300
+- `pricing.test.tsx` - Tests AddItemModal with 300 limit
 - `wardrobe.test.tsx` - Integration tests
 
 ---
@@ -149,9 +149,9 @@ That's it! No other changes needed.
 ```
 src/
 ├── lib/
-│   └── pricing.ts          # Simple: FREE_ITEM_LIMIT = 200
+│   └── pricing.ts          # Simple: FREE_ITEM_LIMIT = 300
 ├── components/
-│   ├── AddItemModal.tsx    # Shows 200 item limit
+│   ├── AddItemModal.tsx    # Shows 300 item limit
 │   ├── SettingsView.tsx    # Free tier UI
 │   └── ClosetView.tsx      # Storage indicator
 ├── types.ts                # Clean UserProfile (no payment types)
@@ -171,7 +171,7 @@ supabase/
 
 | Before | After |
 |--------|-------|
-| Complex subscription tiers | Simple 200 items free |
+| Complex subscription tiers | Simple 300 items free |
 | Lemon Squeezy integration | No payment system |
 | Webhook handling | No webhooks |
 | Item packs for purchase | Everything free |
@@ -200,7 +200,7 @@ If you want to monetize later, options include:
 - Affiliate links
 - Premium support
 
-But for now: **100% free, 200 items, no payments!** 🎉
+But for now: **100% free, 300 items, no payments!** 🎉
 
 ---
 
@@ -213,7 +213,7 @@ But for now: **100% free, 200 items, no payments!** 🎉
 
 **Database issues?**
 - Check migration ran successfully
-- Verify `calculate_user_item_limit()` returns 200
+- Verify `calculate_user_item_limit()` returns 300
 
 **Build errors?**
 - Run `npm run build`

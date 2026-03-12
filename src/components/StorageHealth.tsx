@@ -27,7 +27,7 @@ export function StorageHealth({ current, limit, isPro }: StorageHealthProps) {
             </div>
             {isCritical && (
                 <p className="text-[8px] font-bold text-red-400 uppercase tracking-widest text-center mt-1">
-                    ¡Casi lleno! Borra prendas o pásate a PRO.
+                    ¡Casi lleno! Considera borrar algunas prendas.
                 </p>
             )}
         </div>
