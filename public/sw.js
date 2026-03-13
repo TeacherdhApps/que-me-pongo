@@ -1,12 +1,11 @@
-const CACHE_NAME = 'que-me-pongo-v3'; // Increment version
+const CACHE_NAME = 'que-me-pongo-v4'; // Increment version
 
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './manifest.json',
     './icon-192.svg',
-    './icon-512.svg',
-    './icon-512.png'
+    './icon-512.svg'
 ];
 
 // Cache-first runtime cache for static assets
