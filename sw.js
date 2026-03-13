@@ -1,4 +1,4 @@
-const CACHE_NAME = 'que-me-pongo-v3'; // Increment version
+const CACHE_NAME = 'que-me-pongo-v4'; // Increment version
 
 const ASSETS_TO_CACHE = [
     './',
