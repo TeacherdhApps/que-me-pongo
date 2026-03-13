@@ -4,8 +4,6 @@ import { useWardrobe } from '../hooks/useWardrobe';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
 import { useQueryClient } from '@tanstack/react-query';
-import { StorageHealth } from './StorageHealth';
-import { FREE_ITEM_LIMIT } from '../lib/pricing';
 
 export function SettingsView() {
     const queryClient = useQueryClient();
@@ -139,50 +137,6 @@ export function SettingsView() {
                             min="1"
                             className="bg-white border border-zinc-200 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black transition-all"
                         />
-                    </div>
-                </div>
-            </div>
-
-            {/* Plan & Storage */}
-            <div className="bg-zinc-50 rounded-[3rem] p-10 border border-zinc-100 mb-8 overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-8">
-                    <i className="fas fa-seedling text-4xl opacity-20 text-zinc-300"></i>
-                </div>
-
-                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-8">Plan y Almacenamiento</h3>
-
-                <div className="mb-10">
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl font-black uppercase tracking-tighter">
-                            Plan Gratuito
-                        </span>
-                        <span className="bg-zinc-100 text-zinc-600 text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                            FREE
-                        </span>
-                    </div>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-6">
-                        {wardrobe.length} de {FREE_ITEM_LIMIT} prendas utilizadas
-                    </p>
-
-                    <StorageHealth current={wardrobe.length} limit={FREE_ITEM_LIMIT} isPro={false} />
-                </div>
-
-                {/* Info Box */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-[2.5rem] p-8 border-2 border-green-100">
-                    <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <i className="fas fa-check text-xl text-green-600"></i>
-                        </div>
-                        <div>
-                            <h4 className="text-base font-black uppercase tracking-tighter mb-2 text-green-800">
-                                300 prendas gratis
-                            </h4>
-                            <p className="text-[9px] font-bold text-green-600 uppercase tracking-widest leading-relaxed">
-                                Disfruta de tu armario virtual con hasta 300 prendas sin costo alguno.
-                                <br />
-                                ¡Suficiente espacio para tu estilo!
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
