@@ -6,6 +6,10 @@ import { wrapper } from './setup';
 import type { DailyOutfit } from '../types';
 
 vi.mock('../lib/wardrobeStorage');
+vi.mock('../lib/imageResizer', () => ({
+    resizeImage: vi.fn((base64: string) => Promise.resolve(base64)),
+    generateThumbnail: vi.fn((base64: string) => Promise.resolve(base64)),
+}));
 
 describe('useWeeklyPlan persistence', () => {
     beforeEach(() => {

@@ -12,41 +12,36 @@ const mockRevokeObjectURL = vi.fn();
 const mockClick = vi.fn();
 const mockOpen = vi.fn();
 const mockAlert = vi.fn();
+const mockAppendChild = vi.fn();
+const mockRemoveChild = vi.fn();
 
 const mockLinkElement = {
     href: '',
     download: '',
     click: mockClick,
     setAttribute: vi.fn(),
-};
+} as unknown as HTMLAnchorElement;
 
-vi.stubGlobal('URL', {
-    createObjectURL: mockCreateObjectURL,
-    revokeObjectURL: mockRevokeObjectURL,
-});
+beforeEach(() => {
+    vi.clearAllMocks();
 
-vi.stubGlobal('document', {
-    createElement: () => mockLinkElement,
-    body: {
-        appendChild: vi.fn(),
-        removeChild: vi.fn(),
-    },
-});
+    // Mock URL.createObjectURL and URL.revokeObjectURL
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(mockCreateObjectURL);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(mockRevokeObjectURL);
 
-vi.stubGlobal('window', {
-    open: mockOpen,
-    alert: mockAlert,
-    URL: {
-        createObjectURL: mockCreateObjectURL,
-        revokeObjectURL: mockRevokeObjectURL,
-    },
+    // Mock document.createElement
+    vi.spyOn(document, 'createElement').mockReturnValue(mockLinkElement);
+
+    // Mock document.body.appendChild and removeChild
+    vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild);
+    vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild);
+
+    // Mock window.open and window.alert
+    vi.spyOn(window, 'open').mockImplementation(mockOpen);
+    vi.spyOn(window, 'alert').mockImplementation(mockAlert);
 });
 
 describe('Calendar Sync', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
     const mockOutfit: DailyOutfit = {
         day: 'Lunes',
         date: '2026-03-11',
