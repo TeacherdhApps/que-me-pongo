@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
-import { useUserProfile } from '../hooks/useUserProfile';
 import { useWeather } from '../hooks/useWeather';
 import { useOutfitRecommendation } from '../hooks/useOutfitRecommendation';
 import type { ClothingItem, WeeklyPlan, DailyOutfit, Category } from '../types';
@@ -15,7 +14,6 @@ interface OutfitEditorProps {
 
 export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose }: OutfitEditorProps) {
     const { wardrobe } = useWardrobe();
-    const { profile } = useUserProfile();
     const { weather } = useWeather();
     const { recommendation, loading: aiLoading, error: aiError, generateRecommendation } = useOutfitRecommendation();
     const [openSection, setOpenSection] = useState<Category | null>(null);
@@ -100,19 +98,17 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        {profile.isPro && (
-                            <button
-                                onClick={() => {
-                                    setShowAI(true);
-                                    if (weather) generateRecommendation(wardrobe, weather);
-                                }}
-                                disabled={aiLoading || !weather}
-                                className={`group flex items-center gap-3 px-6 py-4 rounded-full font-black text-[10px] uppercase tracking-widest transition-all ${aiLoading ? 'bg-zinc-100 text-zinc-400' : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 active:scale-95'}`}
-                            >
-                                <i className={`fas ${aiLoading ? 'fa-circle-notch fa-spin' : 'fa-wand-magic-sparkles'} text-xs`}></i>
-                                <span>{aiLoading ? 'Creando Magia...' : 'AI Magic'}</span>
-                            </button>
-                        )}
+                        <button
+                            onClick={() => {
+                                setShowAI(true);
+                                if (weather) generateRecommendation(wardrobe, weather);
+                            }}
+                            disabled={aiLoading || !weather}
+                            className={`group flex items-center gap-3 px-6 py-4 rounded-full font-black text-[10px] uppercase tracking-widest transition-all ${aiLoading ? 'bg-zinc-100 text-zinc-400' : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 active:scale-95'}`}
+                        >
+                            <i className={`fas ${aiLoading ? 'fa-circle-notch fa-spin' : 'fa-wand-magic-sparkles'} text-xs`}></i>
+                            <span>{aiLoading ? 'Creando Magia...' : 'AI Magic'}</span>
+                        </button>
                         <button
                             onClick={handleClose}
                             className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform"
