@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { useWardrobe } from '../hooks/useWardrobe';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { exportAllData, importAllData, clearAllData } from '../lib/wardrobeStorage';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,7 +7,6 @@ import { useQueryClient } from '@tanstack/react-query';
 export function SettingsView() {
     const queryClient = useQueryClient();
     const { profile, update } = useUserProfile();
-    const { wardrobe } = useWardrobe();
     const { isInstallable, installApp } = usePWAInstall();
     const [importStatus, setImportStatus] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
