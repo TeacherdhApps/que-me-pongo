@@ -98,7 +98,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-24 flex flex-col">
       <header className="glass-nav sticky top-0 z-50 px-4 sm:px-6 py-4 sm:py-6 border-b border-zinc-100">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center">
@@ -187,6 +187,10 @@ function App() {
           </>
         )}
       </main>
+
+      <footer className="w-full text-center py-8 text-[9px] sm:text-[10px] text-zinc-400 font-medium uppercase tracking-widest px-4 mt-auto">
+        &copy; Marca registrada todos los derechos reservados | ¿Qué me pongo? 2026
+      </footer>
     </div>
   );
 }
