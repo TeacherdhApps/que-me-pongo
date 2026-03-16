@@ -2,34 +2,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export function AuthView({ onAuthSuccess }: { onAuthSuccess: () => void }) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [isSignUp, setIsSignUp] = useState(false);
+export function AuthView() {
+    const [loading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const handleAuth = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-
-        try {
-            if (isSignUp) {
-                const { error } = await supabase.auth.signUp({ email, password });
-                if (error) throw error;
-                alert('¡Registro exitoso! Revisa tu email para confirmar tu cuenta.');
-            } else {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-                onAuthSuccess();
-            }
-        } catch (err: any) {
-            setError(err.message || 'Ocurrió un error');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleGoogleLogin = async () => {
         setError(null);
@@ -52,7 +27,7 @@ export function AuthView({ onAuthSuccess }: { onAuthSuccess: () => void }) {
                         <img src={`${import.meta.env.BASE_URL}icon-512.svg`} className="w-10 h-10" alt="Logo" />
                     </div>
                     <h2 className="text-3xl font-black uppercase tracking-tighter">
-                        {isSignUp ? 'Crear Cuenta' : 'Bienvenido'}
+                        Bienvenido
                     </h2>
                     <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">
                         Tus outfits sincronizados en la nube
