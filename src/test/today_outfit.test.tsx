@@ -8,14 +8,6 @@ vi.mock('../hooks/useWeather', () => ({
     useWeather: () => ({ weather: { temp: 25, condition: 'Soleado' } })
 }));
 
-vi.mock('../hooks/useOutfitRecommendation', () => ({
-    useOutfitRecommendation: () => ({
-        recommendation: null,
-        loading: false,
-        error: null,
-        generateRecommendation: vi.fn()
-    })
-}));
 
 function getTodayDateKey(): string {
     const today = new Date();

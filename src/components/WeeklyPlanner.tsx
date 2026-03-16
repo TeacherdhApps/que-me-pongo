@@ -3,7 +3,7 @@ import { useState, memo } from 'react';
 import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
-import { downloadWeeklyOutfits, openGoogleCalendar } from '../lib/calendarSync';
+import { openGoogleCalendar } from '../lib/calendarSync';
 import type { ClothingItem } from '../types';
 
 interface DayInfo {
@@ -129,10 +129,6 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         setCurrentDate(nextDate);
     };
 
-    const handleExportCalendar = () => {
-        const outfits = weekDays.map(day => plan[day.date] || { day: day.name, date: day.date, items: [] });
-        downloadWeeklyOutfits(outfits);
-    };
 
     const handleGoogleCalendar = () => {
         // Export today's outfit or first available
@@ -193,13 +189,6 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                         title="Exportar a Google Calendar"
                     >
                         <i className="fab fa-google"></i> Calendar
-                    </button>
-                    <button
-                        onClick={handleExportCalendar}
-                        className="text-[9px] font-black uppercase tracking-widest px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full hover:bg-zinc-200 transition-colors flex items-center gap-2"
-                        title="Descargar archivo ICS"
-                    >
-                        <i className="fas fa-calendar-download"></i> Exportar ICS
                     </button>
                 </div>
             </div>

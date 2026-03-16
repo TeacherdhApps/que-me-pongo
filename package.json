@@ -13,7 +13,6 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@google/genai": "^1.43.0",
     "@imgly/background-removal": "^1.7.0",
     "@qwen-code/qwen-code": "^0.12.0",
     "@supabase/supabase-js": "^2.98.0",

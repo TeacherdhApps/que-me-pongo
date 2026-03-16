@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useWeather } from '../hooks/useWeather';
-import { useOutfitRecommendation } from '../hooks/useOutfitRecommendation';
 import type { ClothingItem, WeeklyPlan, DailyOutfit, Category } from '../types';
 import { Categories } from '../types';
 
@@ -15,9 +14,7 @@ interface OutfitEditorProps {
 export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose }: OutfitEditorProps) {
     const { wardrobe } = useWardrobe();
     const { weather } = useWeather();
-    const { recommendation, loading: aiLoading, error: aiError, generateRecommendation } = useOutfitRecommendation();
     const [openSection, setOpenSection] = useState<Category | null>(null);
-    const [showAI, setShowAI] = useState(false);
 
     // Close on Escape key
     useEffect(() => {
@@ -99,17 +96,6 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                     </div>
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => {
-                                setShowAI(true);
-                                if (weather) generateRecommendation(wardrobe, weather);
-                            }}
-                            disabled={aiLoading || !weather}
-                            className={`group flex items-center gap-3 px-6 py-4 rounded-full font-black text-[10px] uppercase tracking-widest transition-all ${aiLoading ? 'bg-zinc-100 text-zinc-400' : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 active:scale-95'}`}
-                        >
-                            <i className={`fas ${aiLoading ? 'fa-circle-notch fa-spin' : 'fa-wand-magic-sparkles'} text-xs`}></i>
-                            <span>{aiLoading ? 'Creando Magia...' : 'AI Magic'}</span>
-                        </button>
-                        <button
                             onClick={handleClose}
                             className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform"
                         >
@@ -118,39 +104,6 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                     </div>
                 </div>
 
-                {/* AI Recommendation Display */}
-                {showAI && (
-                    <div className="mb-8 animate-fade">
-                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border border-purple-100 rounded-[2.5rem] p-8 backdrop-blur-sm">
-                            <div className="absolute top-0 right-0 p-6 opacity-10">
-                                <i className="fas fa-wand-magic-sparkles text-6xl text-purple-600"></i>
-                            </div>
-
-                            <div className="flex justify-between items-center mb-6">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-600">Recomendación IA</h4>
-                                <button
-                                    onClick={() => setShowAI(false)}
-                                    className="text-zinc-400 hover:text-black transition-colors"
-                                >
-                                    <i className="fas fa-times text-xs"></i>
-                                </button>
-                            </div>
-
-                            {aiError ? (
-                                <div className="bg-red-50 text-red-500 p-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest">
-                                    {aiError}
-                                </div>
-                            ) : (
-                                <div className="prose prose-sm max-w-none">
-                                    <p className="text-zinc-800 font-medium leading-relaxed whitespace-pre-wrap">
-                                        {recommendation || 'Consultando a tu estilista personal...'}
-                                        {aiLoading && <span className="inline-block w-1.5 h-4 bg-purple-400 ml-1 animate-pulse"></span>}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
 
                 <div className="overflow-y-auto no-scrollbar pb-12 space-y-3">
                     {([
