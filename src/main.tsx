@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -36,3 +36,10 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// Global PWA Event Listener to catch the event early
+(window as any).deferredPWAEvent = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  console.log('🌎 Global: beforeinstallprompt intercepted');
+  (window as any).deferredPWAEvent = e;
+});

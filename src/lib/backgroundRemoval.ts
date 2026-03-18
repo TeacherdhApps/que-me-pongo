@@ -11,7 +11,7 @@ export async function processBackgroundRemoval(imageSource: string | Blob): Prom
                 // Optional: track progress if needed
                 // console.log(`Background removal progress: ${_key} ${_current}/${_total}`);
             },
-            publicPath: 'https://static.img.ly/packages/@imgly/background-removal-data/1.4.5/dist/' // Using CDN for models
+            publicPath: 'https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/' // Using unpkg CDN for 1.7.0 models
         });
         return result;
     } catch (error) {

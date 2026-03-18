@@ -1,4 +1,4 @@
-const CACHE_NAME = 'que-me-pongo-v5'; // Increment version
+const CACHE_NAME = 'que-me-pongo-v7'; // Increment version
 
 const ASSETS_TO_CACHE = [
     './',
@@ -203,6 +203,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     event.waitUntil(
-        clients.openWindow(event.notification.data.url || './')
+        self.clients.openWindow(event.notification.data.url || './')
     );
 });

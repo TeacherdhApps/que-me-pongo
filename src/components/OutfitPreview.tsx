@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import type { ClothingItem } from '../types';
 import { Categories } from '../types';
 
@@ -93,12 +93,12 @@ const DraggableItem = ({ item, label, initialPos, zIndex, bringToFront }: Dragga
                 position: 'absolute',
                 touchAction: 'none'
             }}
-            className={`bg-white rounded-3xl p-3 flex flex-col items-center justify-center shadow-xl cursor-grab active:cursor-grabbing transition-shadow ${isDragging || isResizing ? 'shadow-2xl ring-4 ring-black/10' : 'border border-zinc-100 hover:shadow-2xl'}`}
+            className={`flex flex-col items-center justify-center cursor-grab active:cursor-grabbing transition-all group ${isDragging || isResizing ? 'ring-2 ring-black/20 scale-105 z-[999]' : 'hover:ring-1 hover:ring-zinc-200'}`}
         >
             {item ? (
-                <div className="w-full h-full flex flex-col items-center gap-2 pointer-events-none relative">
-                    <img src={item.image} className="w-full h-[calc(100%-1.25rem)] object-cover rounded-2xl shadow-sm bg-zinc-50" alt={item.name} draggable="false" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 text-center truncate w-full absolute bottom-0">{item.name}</span>
+                <div className="w-full h-full flex flex-col items-center pointer-events-none relative">
+                    <img src={item.image} className="w-full h-full object-contain" alt={item.name} draggable="false" />
+                    <span className="text-[7px] font-black uppercase tracking-widest text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4 bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-sm">{item.name}</span>
                 </div>
             ) : (
                 <div className="flex flex-col items-center gap-2 opacity-30 pointer-events-none w-full h-full justify-center">
@@ -113,7 +113,7 @@ const DraggableItem = ({ item, label, initialPos, zIndex, bringToFront }: Dragga
                 onPointerMove={handleResizePointerMove}
                 onPointerUp={handleResizePointerUp}
                 onPointerCancel={handleResizePointerUp}
-                className="absolute -bottom-2 -right-2 w-8 h-8 flex items-center justify-center cursor-nwse-resize hover:bg-zinc-100 bg-white rounded-full text-zinc-300 border border-zinc-200 hover:text-black shadow-sm transition-colors z-[100]"
+                className="absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center cursor-nwse-resize opacity-0 group-hover:opacity-100 bg-black text-white rounded-full shadow-lg transition-all z-[100] hover:scale-110"
                 title="Redimensionar"
                 style={{ touchAction: 'none' }}
             >
