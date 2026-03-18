@@ -117,10 +117,9 @@ export function TodayOutfitWidget() {
 
             {isViewing && (
                 <OutfitPreview
-                    items={items}
+                    outfit={todayOutfit}
                     onClose={() => setIsViewing(false)}
-                    dayName={dayName}
-                    dateDisplay={displayDate}
+                    onSave={(updates) => updateDay(dateKey, { ...todayOutfit, ...updates })}
                 />
             )}
         </div>

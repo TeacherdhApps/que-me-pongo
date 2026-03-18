@@ -26,13 +26,24 @@ export interface WeatherData {
   city: string;
 }
 
+export interface Position {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  zIndex: number;
+}
+
+export type CanvasLayout = Record<string, Position>;
+
 export interface DailyOutfit {
   day: string;                // e.g., "Lunes"
   date?: string;              // e.g., "2026-02-19" (ISO YYYY-MM-DD)
   items: ClothingItem[];      // selected clothing items
   event?: string;             // e.g., "Reunión de trabajo"
   notes?: string;             // user notes
-
+  canvasLayout?: CanvasLayout;
+  canvasBackground?: string;
 }
 
 export type WeeklyPlan = Record<string, DailyOutfit>;

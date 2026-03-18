@@ -223,10 +223,9 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
             )}
             {viewingDay && (
                 <OutfitPreview
-                    items={plan[viewingDay.date]?.items || []}
+                    outfit={plan[viewingDay.date] || { day: viewingDay.name, date: viewingDay.date, items: [] }}
                     onClose={() => setViewingDay(null)}
-                    dayName={viewingDay.name}
-                    dateDisplay={viewingDay.displayDate}
+                    onSave={(updates) => updateDay(viewingDay.date, { ...(plan[viewingDay.date] || { day: viewingDay.name, date: viewingDay.date, items: [] }), ...updates })}
                 />
             )}
         </div>
