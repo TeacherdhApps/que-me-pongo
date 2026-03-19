@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ClosetView } from './components/ClosetView';
 import { WeeklyPlanner } from './components/WeeklyPlanner';
@@ -99,6 +100,7 @@ function App() {
 
   return (
     <div className="min-h-screen pb-24 flex flex-col">
+      <Analytics />
       <header className="glass-nav sticky top-0 z-50 px-4 sm:px-6 py-4 sm:py-6 border-b border-zinc-100">
         <div className="max-w-6xl mx-auto">
           <div className="flex justify-between items-center">
