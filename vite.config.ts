@@ -8,10 +8,17 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    exclude: ['@imgly/background-removal']
+  },
   build: {
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
-      external: ['onnxruntime-web/webgpu']
+      external: [
+        'onnxruntime-web',
+        'onnxruntime-web/webgpu',
+        'onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm'
+      ]
     }
   },
 })
