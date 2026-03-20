@@ -7,11 +7,12 @@ import { removeBackground } from '@imgly/background-removal';
 export async function processBackgroundRemoval(imageSource: string | Blob): Promise<Blob> {
     try {
         const result = await removeBackground(imageSource, {
+            model: 'isnet_quint8',
             progress: (_key, _current, _total) => {
                 // Optional: track progress if needed
                 // console.log(`Background removal progress: ${_key} ${_current}/${_total}`);
             },
-            publicPath: 'https://unpkg.com/@imgly/background-removal-data@1.7.0/dist/' // Using unpkg CDN for 1.7.0 models
+            // Use library's default CDN (staticimgly.com) which hosts correct model files for v1.7.0
         });
         return result;
     } catch (error) {

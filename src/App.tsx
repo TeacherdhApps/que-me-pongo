@@ -44,15 +44,34 @@ function App() {
   });
 
   useEffect(() => {
+    // Check if we are at a defunct path like /Que-me-pongo/ while base is /
+    const base = import.meta.env.BASE_URL;
+    if (base === '/' && window.location.pathname.includes('/Que-me-pongo/')) {
+      const newUrl = window.location.origin + '/' + window.location.hash;
+      window.history.replaceState(null, '', newUrl);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) queryClient.invalidateQueries();
+      if (session) {
+        queryClient.invalidateQueries();
+        // Clean URL hash after tokens are consumed into session
+        if (window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       queryClient.invalidateQueries();
-      if (session) setView('closet');
+      if (session) {
+        setView('closet');
+        // Clean URL hash after tokens are consumed during auth change
+        if (window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
