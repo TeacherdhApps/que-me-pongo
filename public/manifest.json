@@ -1,7 +1,7 @@
 {
-    "name": "¿Qué me pongo? | Armario Personal Inteligente",
+    "name": "¿Qué me pongo? | Tu armario en tu bolsillo",
     "short_name": "Qué me pongo",
-    "description": "Curaduría personal de moda inteligente. Organiza tu armario y recibe recomendaciones personalizadas.",
+    "description": "Tu armario al alcance de tu mano. Organiza tu ropa fácilmente.",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",

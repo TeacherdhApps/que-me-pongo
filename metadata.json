@@ -1,7 +1,7 @@
 
 {
   "name": "¿Qué me pongo?",
-  "description": "Curaduría personal de moda inteligente. Organiza tu armario y recibe recomendaciones personalizadas.",
+  "description": "Tu armario al alcance de tu mano. Organiza tu ropa fácilmente.",
   "requestFramePermissions": [
     "camera",
     "geolocation"
