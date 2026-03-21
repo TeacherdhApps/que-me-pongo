@@ -28,7 +28,8 @@ export async function getCurrentWeather(): Promise<WeatherData> {
                 resolve({
                     temp: Math.round(data.current_weather.temperature),
                     condition: condition,
-                    city: 'Tu ubicación' // Open-Meteo doesn't provide city name directly in basic forecast
+                    city: 'Tu ubicación', // Open-Meteo doesn't provide city name directly in basic forecast
+                    code: weatherCode
                 });
             } catch (err) {
                 reject(err);

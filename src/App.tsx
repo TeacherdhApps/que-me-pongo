@@ -6,6 +6,7 @@ import { WeeklyPlanner } from './components/WeeklyPlanner';
 import { MonthlyPlanner } from './components/MonthlyPlanner';
 import { SettingsView } from './components/SettingsView';
 import { AuthView } from './components/AuthView';
+import { WeatherIcon } from './components/WeatherIcon';
 import { useUserProfile } from './hooks/useUserProfile';
 import { supabase } from './lib/supabase';
 import type { WeatherData } from './types';
@@ -93,7 +94,7 @@ function App() {
         const geoData = await geoRes.json();
         const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || geoData.address?.state || 'Tu ubicación';
 
-        setWeather({ temp, condition, city });
+        setWeather({ temp, condition, city, code: weatherData.current.weather_code });
       } catch (err) {
         console.error('Error fetching weather:', err);
         setWeather({ temp: 0, condition: 'Sin conexión', city: 'Desconocida' });
@@ -136,7 +137,10 @@ function App() {
             <div className="flex items-center gap-3 sm:gap-6">
               <div className="text-[9px] sm:text-[10px] font-bold bg-zinc-100 px-2 sm:px-3 py-1 rounded-full shadow-sm flex flex-col sm:flex-row items-center gap-0 sm:gap-2">
                 <span className="text-zinc-500 truncate max-w-[100px] sm:max-w-none">📍 {weather.city}</span>
-                <span className="whitespace-nowrap">{weather.temp}°C · {weather.condition}</span>
+                <span className="whitespace-nowrap flex items-center gap-1">
+                  <WeatherIcon condition={weather.condition} code={weather.code} className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {weather.temp}°C · {weather.condition}
+                </span>
               </div>
               {session && (
                 <button

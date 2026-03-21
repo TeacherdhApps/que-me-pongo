@@ -4,6 +4,7 @@ import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
 import { useWeather } from '../hooks/useWeather';
+import { WeatherIcon } from './WeatherIcon';
 
 export function TodayOutfitWidget() {
     const { plan, updateDay, isLoading } = useWeeklyPlan();
@@ -46,7 +47,7 @@ export function TodayOutfitWidget() {
                         <h3 className="text-3xl font-black uppercase tracking-tighter">Tu Outfit</h3>
                         {weather && (
                             <div className="flex items-center gap-2 mt-2 text-zinc-400">
-                                <i className="fas fa-cloud-sun text-xs"></i>
+                                <WeatherIcon condition={weather.condition} code={weather.code} className="w-4 h-4" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest">{weather.temp}°C · {weather.condition}</span>
                             </div>
                         )}

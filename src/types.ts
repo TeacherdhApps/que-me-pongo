@@ -24,6 +24,7 @@ export interface WeatherData {
   temp: number;
   condition: string;
   city: string;
+  code?: number;
 }
 
 export interface Position {

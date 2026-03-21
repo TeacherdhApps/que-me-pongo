@@ -4,7 +4,6 @@ import { Categories, type Category, type ClothingItem } from '../types';
 import { resizeImage } from '../lib/imageResizer';
 import { uploadImage } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
-import { processBackgroundRemoval, blobToBase64 } from '../lib/backgroundRemoval';
 import { ImageUploadProgress } from './ui/LoadingStates';
 import { FREE_ITEM_LIMIT } from '../lib/pricing';
 
@@ -19,8 +18,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
     const [category, setCategory] = useState<Category>(Categories.TOP);
     const [image, setImage] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isRemovingBackground, setIsRemovingBackground] = useState(false);
-    const [removeBG, setRemoveBG] = useState(true);
+
     const [isDragging, setIsDragging] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number>(0);
     const fileRef = useRef<HTMLInputElement>(null);
@@ -43,21 +41,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                 reader.readAsDataURL(file);
             });
 
-            let processedImage = rawBase64;
-
-            if (removeBG) {
-                setIsRemovingBackground(true);
-                try {
-                    const blob = await processBackgroundRemoval(file);
-                    processedImage = await blobToBase64(blob);
-                } catch (bgErr) {
-                    console.error('BG removal failed, falling back to original:', bgErr);
-                } finally {
-                    setIsRemovingBackground(false);
-                }
-            }
-
-            const compressed = await resizeImage(processedImage, 800, 800, 0.7);
+            const compressed = await resizeImage(rawBase64, 800, 800, 0.7);
             setImage(compressed);
         } catch (err) {
             console.error('Error processing image:', err);
@@ -204,21 +188,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                     )}
                 </div>
 
-                <div className="flex items-center justify-between px-6 py-4 bg-zinc-50 rounded-3xl border border-zinc-100">
-                    <div className="flex items-center gap-3">
-                        <i className="fas fa-magic text-zinc-400 text-[10px]"></i>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Quitar Fondo AI</p>
-                            <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Acabado de catálogo</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setRemoveBG(!removeBG)}
-                        className={`w-12 h-6 rounded-full transition-all relative ${removeBG ? 'bg-black' : 'bg-zinc-200'}`}
-                    >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${removeBG ? 'left-7' : 'left-1'}`}></div>
-                    </button>
-                </div>
+
 
                 <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={e => {
                     if (e.target.files?.[0]) {
@@ -264,10 +234,10 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
 
                 <button
                     onClick={submit}
-                    disabled={!name || !image || isProcessing || isUploading || isRemovingBackground}
+                    disabled={!name || !image || isProcessing || isUploading}
                     className="w-full py-5 bg-black text-white rounded-full text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isRemovingBackground ? 'Eliminando fondo...' : isProcessing ? 'Procesando...' : isUploading ? 'Subiendo...' : 'Guardar Pieza'}
+                    {isProcessing ? 'Procesando...' : isUploading ? 'Subiendo...' : 'Guardar Pieza'}
                 </button>
             </div>
         </div>
