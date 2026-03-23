@@ -20,9 +20,9 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
     isToday: boolean;
 }) => {
     return (
-        <div className={`rounded-[2rem] p-8 flex items-center justify-between group transition-colors animate-fade ${isToday ? 'bg-black text-white ring-4 ring-black/10' : 'bg-zinc-50 hover:bg-zinc-100'}`}>
-            <div className="flex items-center gap-12">
-                <div className="w-24 flex flex-col">
+        <div className={`rounded-[2rem] p-5 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 group transition-colors animate-fade ${isToday ? 'bg-black text-white ring-4 ring-black/10' : 'bg-zinc-50 hover:bg-zinc-100'}`}>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-12 w-full">
+                <div className="w-auto md:w-24 flex flex-col">
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isToday ? 'text-white' : 'text-black'}`}>{day.name}</span>
                         {isToday && (
@@ -31,7 +31,7 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
                     </div>
                     <span className={`text-[10px] font-bold mt-1 ${isToday ? 'text-zinc-400' : 'text-zinc-700'}`}>{day.displayDate}</span>
                 </div>
-                <div className="flex -space-x-4">
+                <div className="flex flex-wrap md:flex-nowrap -space-x-4">
                     {items.map(itm => (
                         <img
                             key={itm.id}
@@ -46,7 +46,7 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
                     )}
                 </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
                 {items.length > 0 && (
                     <button
                         onClick={() => onView(day)}
@@ -71,9 +71,9 @@ PlannerDayCard.displayName = 'PlannerDayCard';
 const WeeklySkeleton = () => (
     <div className="grid gap-4 animate-pulse">
         {[1, 2, 3, 4, 5, 6, 7].map(i => (
-            <div key={i} className="bg-zinc-50 rounded-[2rem] p-8 flex items-center justify-between">
-                <div className="flex items-center gap-12">
-                    <div className="w-24 space-y-2">
+            <div key={i} className="bg-zinc-50 rounded-[2rem] p-5 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-12 w-full">
+                    <div className="w-auto md:w-24 space-y-2">
                         <div className="h-2 w-16 bg-zinc-200 rounded"></div>
                         <div className="h-2 w-12 bg-zinc-100 rounded"></div>
                     </div>
@@ -83,7 +83,7 @@ const WeeklySkeleton = () => (
                         ))}
                     </div>
                 </div>
-                <div className="w-20 h-8 bg-zinc-200 rounded-full"></div>
+                <div className="w-20 h-8 bg-zinc-200 rounded-full md:mt-0 mt-2 self-end md:self-auto"></div>
             </div>
         ))}
     </div>

@@ -98,13 +98,13 @@ const PlannerDayCell = memo(({ date, outfit, isToday, onEdit, onView, onSelect, 
 PlannerDayCell.displayName = 'PlannerDayCell';
 
 const MonthlySkeleton = () => (
-    <div className="bg-zinc-50 rounded-[3rem] p-10 border border-zinc-100 animate-pulse">
-        <div className="grid grid-cols-7 gap-4 mb-8">
+    <div className="bg-zinc-50 rounded-[2rem] md:rounded-[3rem] p-4 md:p-10 border border-zinc-100 animate-pulse overflow-x-auto">
+        <div className="grid grid-cols-7 gap-2 md:gap-4 mb-8 min-w-[280px]">
             {[1, 2, 3, 4, 5, 6, 7].map(i => (
                 <div key={i} className="h-2 w-8 bg-zinc-200 rounded mx-auto"></div>
             ))}
         </div>
-        <div className="grid grid-cols-7 gap-4">
+        <div className="grid grid-cols-7 gap-2 md:gap-4 min-w-[280px]">
             {Array.from({ length: 35 }).map((_, i) => (
                 <div key={i} className="aspect-square bg-white rounded-2xl p-2 flex flex-col items-center justify-center gap-2">
                     <div className="w-4 h-2 bg-zinc-100 rounded"></div>
@@ -211,8 +211,8 @@ export function MonthlyPlanner({ onViewChange }: MonthlyPlannerProps) {
             {isLoading ? (
                 <MonthlySkeleton />
             ) : (
-                <div className="bg-zinc-50 rounded-[3rem] p-10 border border-zinc-100 relative">
-                    <div className="grid grid-cols-7 gap-4 mb-8">
+                <div className="bg-zinc-50 rounded-[2rem] md:rounded-[3rem] p-4 md:p-10 border border-zinc-100 relative overflow-x-auto">
+                    <div className="grid grid-cols-7 gap-2 md:gap-4 mb-8 min-w-[280px]">
                         {dayNames.map(d => (
                             <div key={d} className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
                                 {d}
@@ -220,7 +220,7 @@ export function MonthlyPlanner({ onViewChange }: MonthlyPlannerProps) {
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-7 gap-4">
+                    <div className="grid grid-cols-7 gap-2 md:gap-4 min-w-[280px]">
                         {daysInMonth.map((date, idx) => {
                             if (!date) return <div key={`empty-${idx}`} className="aspect-square" />;
 

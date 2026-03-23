@@ -69,11 +69,12 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     // This eliminates race conditions from rapid-fire optimistic mutations.
     const handleClose = () => {
         if (hasChanges.current) {
-            updateDay(editingDay.date, {
+            updateDay(editingDay.date, (old) => ({
+                ...old,
                 day: editingDay.name,
                 date: editingDay.date,
                 items: selectedItems
-            });
+            }));
         }
         onClose();
     };
