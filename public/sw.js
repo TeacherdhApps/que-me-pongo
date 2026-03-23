@@ -1,4 +1,4 @@
-const CACHE_NAME = 'que-me-pongo-v7'; // Increment version
+const CACHE_NAME = 'que-me-pongo-v8'; // Increment version
 
 const ASSETS_TO_CACHE = [
     './',
@@ -189,8 +189,8 @@ async function syncWardrobeData() {
 self.addEventListener('push', (event) => {
     const options = {
         body: event.data?.text() || '¡Es hora de planificar tu outfit!',
-        icon: './icon-192.svg',
-        badge: './icon-192.svg',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
         vibrate: [100, 50, 100],
         data: { url: './' }
     };
