@@ -53,25 +53,36 @@ function App() {
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      // Check for demo mode cookie
+      const isDemoMode = document.cookie.includes('demo_mode=true');
+      
       if (session) {
+        setSession(session);
         queryClient.invalidateQueries();
         // Clean URL hash after tokens are consumed into session
         if (window.location.hash.includes('access_token')) {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
+      } else if (isDemoMode) {
+        // Ghost session for demo
+        setSession({ user: { id: 'demo-user', email: 'demo@example.com' }, isDemo: true });
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      queryClient.invalidateQueries();
       if (session) {
+        setSession(session);
+        // Clear demo cookie if they officially log in
+        document.cookie = "demo_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        queryClient.invalidateQueries();
         setView('closet');
         // Clean URL hash after tokens are consumed during auth change
         if (window.location.hash.includes('access_token')) {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
+      } else {
+        const isDemoMode = document.cookie.includes('demo_mode=true');
+        if (!isDemoMode) setSession(null);
       }
     });
 
@@ -112,9 +123,11 @@ function App() {
     }
   }, []);
 
-  const logout = async () => {
+   const logout = async () => {
     await supabase.auth.signOut();
+    document.cookie = "demo_mode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     queryClient.clear();
+    setSession(null);
     setView('auth');
   };
 
@@ -146,13 +159,28 @@ function App() {
                 <button
                   onClick={logout}
                   className="text-[10px] font-bold uppercase tracking-widest opacity-30 hover:opacity-100 transition-opacity flex-shrink-0"
-                  title="Cerrar Sesión"
+                  title={session.isDemo ? "Salir de Demo" : "Cerrar Sesión"}
                 >
-                  <i className="fas fa-sign-out-alt"></i>
+                  <i className={`fas ${session.isDemo ? 'fa-times' : 'fa-sign-out-alt'}`}></i>
                 </button>
               )}
             </div>
           </div>
+
+          {session?.isDemo && (
+            <div className="mt-4 p-3 bg-black text-white rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <p className="text-[9px] font-black uppercase tracking-widest">Modo Demo: Guarda tu progreso</p>
+              </div>
+              <button 
+                onClick={() => setView('auth')}
+                className="bg-white text-black px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest hover:scale-105 transition-transform"
+              >
+                Vincular Google
+              </button>
+            </div>
+          )}
 
           {session && (
             <nav className="hidden sm:flex gap-8 mt-4">

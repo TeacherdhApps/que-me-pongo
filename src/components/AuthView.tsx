@@ -20,6 +20,13 @@ export function AuthView() {
         }
     };
 
+    const handleDemoEnter = () => {
+        // Set a demo cookie that lasts for 7 days
+        const expires = new Date(Date.now() + 7 * 864e5).toUTCString();
+        document.cookie = `demo_mode=true; expires=${expires}; path=/`;
+        window.location.reload();
+    };
+
     return (
         <div className="min-h-[80vh] flex items-center justify-center animate-fade px-6">
             <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-10 w-full max-w-md space-y-10">
@@ -52,9 +59,12 @@ export function AuthView() {
                     </button>
 
                     <div className="text-center mt-4">
-                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest cursor-pointer hover:text-black transition-colors">
+                        <button 
+                            onClick={handleDemoEnter}
+                            className="text-xs font-bold text-zinc-500 uppercase tracking-widest cursor-pointer hover:text-black transition-colors"
+                        >
                             O prueba la demo en 3 segundos
-                        </p>
+                        </button>
                     </div>
 
                     {error && (

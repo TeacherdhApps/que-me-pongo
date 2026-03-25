@@ -35,13 +35,9 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
         }
         setIsProcessing(true);
         try {
-            const reader = new FileReader();
-            const rawBase64 = await new Promise<string>((resolve) => {
-                reader.onload = (ev) => resolve(ev.target?.result as string);
-                reader.readAsDataURL(file);
-            });
-
-            const compressed = await resizeImage(rawBase64, 800, 800, 0.7);
+            const objectUrl = URL.createObjectURL(file);
+            const compressed = await resizeImage(objectUrl, 800, 800, 0.7);
+            URL.revokeObjectURL(objectUrl);
             setImage(compressed);
         } catch (err) {
             console.error('Error processing image:', err);
