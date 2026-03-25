@@ -16,16 +16,23 @@ async function getUserId() {
 // --- Image Storage ---
 
 function base64ToFile(base64: string, filename: string): File {
-    const [header, data] = base64.split(',');
-    const mimeMatch = header.match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-    const byteString = atob(data);
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
+    try {
+        const parts = base64.split(';base64,');
+        const contentType = parts[0].split(':')[1] || 'image/jpeg';
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(new ArrayBuffer(rawLength));
+
+        for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i);
+        }
+
+        return new File([uInt8Array], filename, { type: contentType });
+    } catch (e) {
+        console.error('Conversion to file failed', e);
+        // Fallback for very basic URI
+        return new File([], filename, { type: 'image/jpeg' });
     }
-    return new File([ab], filename, { type: mime });
 }
 
 import { resizeImage, generateThumbnail } from './imageResizer';
