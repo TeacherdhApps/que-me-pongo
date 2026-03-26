@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { ClothingItem, DailyOutfit, CanvasLayout, Position } from '../types';
+import type { ClothingItem, DailyOutfit, CanvasLayout, Position, Category } from '../types';
+import { Categories } from '../types';
 import { useWardrobe } from '../hooks/useWardrobe';
 
 interface OutfitPreviewProps {
@@ -128,6 +129,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     const [background, setBackground] = useState(outfit.canvasBackground || 'dots');
     const [isSaving, setIsSaving] = useState(false);
     const [showItemPicker, setShowItemPicker] = useState(false);
+    const [pickerOpenSection, setPickerOpenSection] = useState<Category | null>(null);
 
     const [maxZ, setMaxZ] = useState(() => {
         const indices = Object.values(outfit.canvasLayout || {}).map(p => p.zIndex);
@@ -282,29 +284,71 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
             {/* Item Picker Modal Overlay */}
             {showItemPicker && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-fade">
-                    <div className="bg-white rounded-[3rem] p-10 w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-2xl font-black uppercase tracking-tight">Tu Armario</h3>
-                            <button onClick={() => setShowItemPicker(false)} className="w-10 h-10 flex items-center justify-center bg-zinc-50 rounded-full hover:bg-zinc-100 transition-colors">
+                    <div className="bg-white rounded-[3rem] p-6 md:p-10 w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tight">Tu Armario</h3>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Selecciona por categoría</p>
+                            </div>
+                            <button onClick={() => { setShowItemPicker(false); setPickerOpenSection(null); }} className="w-10 h-10 flex items-center justify-center bg-zinc-50 rounded-full hover:bg-zinc-100 transition-colors">
                                 <i className="fas fa-times text-zinc-400"></i>
                             </button>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto pr-4 no-scrollbar">
-                            {wardrobe.filter(wi => !canvasItems.find(ci => ci.id === wi.id)).map(witem => (
-                                <button
-                                    key={witem.id}
-                                    onClick={() => {
-                                        setCanvasItems([...canvasItems, witem]);
-                                        setShowItemPicker(false);
-                                    }}
-                                    className="aspect-square bg-zinc-50 rounded-2xl p-2 border border-zinc-100 hover:border-black transition-all group overflow-hidden relative"
-                                >
-                                    <img src={witem.image} className="w-full h-full object-cover rounded-xl transition-transform group-hover:scale-110" alt={witem.name} />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex flex-col items-center justify-center transition-all opacity-0 group-hover:opacity-100">
-                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Añadir</span>
+                        <div className="overflow-y-auto pr-2 no-scrollbar space-y-3 flex-1">
+                            {([
+                                { key: Categories.OUTERWEAR, icon: 'fa-vest' },
+                                { key: Categories.TOP, icon: 'fa-shirt' },
+                                { key: Categories.BOTTOM, icon: 'fa-socks' },
+                                { key: Categories.SHOES, icon: 'fa-shoe-prints' },
+                            ] as const).map(({ key, icon }) => {
+                                const availableItems = wardrobe.filter(wi => wi.category === key && !canvasItems.find(ci => ci.id === wi.id));
+                                if (availableItems.length === 0) return null;
+                                const isOpen = pickerOpenSection === key;
+
+                                return (
+                                    <div key={key} className="space-y-3">
+                                        <button
+                                            onClick={() => setPickerOpenSection(prev => prev === key ? null : key)}
+                                            className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all ${isOpen ? 'bg-black text-white' : 'bg-zinc-50 hover:bg-zinc-100 text-black'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <i className={`fas ${icon} text-[10px] ${isOpen ? 'text-white' : 'text-zinc-400'}`}></i>
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{key}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-[10px] font-bold ${isOpen ? 'text-zinc-500' : 'text-zinc-300'}`}>
+                                                    {availableItems.length} {availableItems.length === 1 ? 'pieza' : 'piezas'}
+                                                </span>
+                                                <i className={`fas fa-chevron-down text-[8px] transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
+                                            </div>
+                                        </button>
+
+                                        {isOpen && (
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 px-1 animate-fade py-2">
+                                                {availableItems.map(witem => (
+                                                    <button
+                                                        key={witem.id}
+                                                        onClick={() => {
+                                                            setCanvasItems([...canvasItems, witem]);
+                                                            setShowItemPicker(false);
+                                                            setPickerOpenSection(null);
+                                                        }}
+                                                        className="aspect-square bg-zinc-50 rounded-2xl p-2 border border-zinc-100 hover:border-black transition-all group overflow-hidden relative"
+                                                    >
+                                                        <img src={witem.image} className="w-full h-full object-cover rounded-xl transition-transform group-hover:scale-110" alt={witem.name} />
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex flex-col items-center justify-center transition-all opacity-0 group-hover:opacity-100 rounded-2xl">
+                                                            <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-lg">Añadir</span>
+                                                        </div>
+                                                        <div className="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-sm py-1.5 px-2 text-[8px] font-bold text-white uppercase tracking-widest translate-y-full transition-transform group-hover:translate-y-0 rounded-b-xl">
+                                                            {witem.name}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                </button>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

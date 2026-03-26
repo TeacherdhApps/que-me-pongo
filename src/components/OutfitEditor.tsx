@@ -15,6 +15,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
     const { wardrobe } = useWardrobe();
     const { weather } = useWeather();
     const [openSection, setOpenSection] = useState<Category | null>(null);
+    const categoriesRef = useRef<HTMLDivElement>(null);
 
     // Close on Escape key
     useEffect(() => {
@@ -45,6 +46,20 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
             didSeedFromPlan.current = true;
         }
     }, [initialPlan, editingDay.date, selectedItems.length]);
+
+    // Auto-open first category with items and scroll to categories on mount
+    useEffect(() => {
+        const categoryOrder = [Categories.OUTERWEAR, Categories.TOP, Categories.BOTTOM, Categories.SHOES] as const;
+        const firstWithItems = categoryOrder.find(cat => wardrobe.some(item => item.category === cat));
+        if (firstWithItems) {
+            setOpenSection(firstWithItems);
+        }
+        // Scroll to categories after a short delay to allow render
+        const timer = setTimeout(() => {
+            categoriesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+        return () => clearTimeout(timer);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const toggleSection = (cat: Category) => {
         setOpenSection(prev => prev === cat ? null : cat);
@@ -106,7 +121,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                 </div>
 
 
-                <div className="overflow-y-auto no-scrollbar pb-12 space-y-3">
+                <div ref={categoriesRef} className="overflow-y-auto no-scrollbar pb-12 space-y-3">
                     {([
                         { key: Categories.OUTERWEAR, icon: 'fa-vest' },
                         { key: Categories.TOP, icon: 'fa-shirt' },

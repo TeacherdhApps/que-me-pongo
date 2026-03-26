@@ -180,20 +180,20 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
             if (!error && data) {
                 const cloudPlan = data.plan_data || {};
                 
-                // Simple merge strategy: if local is empty, use cloud.
-                // Otherwise, we'd need timestamps to know which is newer.
-                // For now, let's at least not overwrite if local has something and cloud is empty.
-                if (Object.keys(localPlan).length === 0 && Object.keys(cloudPlan).length > 0) {
+                // Merge: cloud is base, local overlays per-day.
+                // For each date key, keep whichever side has items (prefer local edits
+                // that haven't synced yet, but don't drop cloud-only days).
+                const merged: WeeklyPlan = { ...cloudPlan, ...localPlan };
+                
+                // If local was empty (fresh load / cleared cache),
+                // still include all cloud data
+                if (Object.keys(localPlan).length === 0) {
                     await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
                     return cloudPlan;
                 }
                 
-                // If both have data, we'll favor cloud for now but this is where 
-                // a more sophisticated sync/merge would go.
-                if (Object.keys(cloudPlan).length > 0) {
-                    await db.plans.put({ id: 'weekly-plan', plan_data: cloudPlan });
-                    return cloudPlan;
-                }
+                await db.plans.put({ id: 'weekly-plan', plan_data: merged });
+                return merged;
             }
         } catch (err) {
             console.error('Error loading plan from cloud, using local:', err);
@@ -204,14 +204,40 @@ export async function loadWeeklyPlan(): Promise<WeeklyPlan> {
 
 export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<void> {
     const userId = await getUserId();
-    // 1. Save to local Dexie IMMEDIATELY
-    await db.plans.put({ id: 'weekly-plan', plan_data: plan });
+
+    // 1. Merge with existing local data so we never lose past days
+    const localRecord = await db.plans.get('weekly-plan');
+    const existingLocal = localRecord?.plan_data || {};
+    const mergedLocal = { ...existingLocal, ...plan };
+    await db.plans.put({ id: 'weekly-plan', plan_data: mergedLocal });
     
-    // 2. If online and logged in, sync to Supabase
+    // 2. If online and logged in, MERGE with cloud data before upserting.
+    //    This prevents the cache (which may only have the current week)
+    //    from overwriting historical outfit data stored in Supabase.
     if (userId) {
+        let mergedCloud = mergedLocal;
+        try {
+            const { data, error: readError } = await supabase
+                .from('plans')
+                .select('plan_data')
+                .eq('user_id', userId)
+                .single();
+
+            if (!readError && data?.plan_data) {
+                // Cloud is the base, local edits override per-day
+                mergedCloud = { ...data.plan_data, ...mergedLocal };
+            }
+        } catch (err) {
+            console.error('Error reading existing cloud plan for merge:', err);
+            // Proceed with local-only data; better than losing new edits
+        }
+
+        // Also update local Dexie with the full merged set
+        await db.plans.put({ id: 'weekly-plan', plan_data: mergedCloud });
+
         const { error } = await supabase.from('plans').upsert({ 
             user_id: userId, 
-            plan_data: plan
+            plan_data: mergedCloud
         }, { onConflict: 'user_id' });
         
         if (error) {
