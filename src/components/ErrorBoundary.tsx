@@ -1,93 +1,78 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { translations, type Locale } from '../i18n/translations';
 
 interface Props {
-    children: ReactNode;
-    fallback?: ReactNode;
-    onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  children: ReactNode;
 }
 
 interface State {
-    hasError: boolean;
-    error: Error | null;
+  hasError: boolean;
+  error: Error | null;
+  locale: Locale;
 }
 
-/**
- * Error Boundary component to catch and display errors in the component tree
- * Prevents the entire app from crashing when a single component fails
- */
 export class ErrorBoundary extends Component<Props, State> {
-    constructor(props: Props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-    }
+  public state: State = {
+    hasError: false,
+    error: null,
+    locale: (localStorage.getItem('qmp-locale') as Locale) || 'es'
+  };
 
-    static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error };
-    }
-
-    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('ErrorBoundary caught an error:', error, errorInfo);
-        this.props.onError?.(error, errorInfo);
-    }
-
-    handleReset = () => {
-        this.setState({ hasError: false, error: null });
-        window.location.reload();
+  public static getDerivedStateFromError(error: Error): State {
+    return { 
+      hasError: true, 
+      error, 
+      locale: (localStorage.getItem('qmp-locale') as Locale) || 'es'
     };
+  }
 
-    render() {
-        if (this.state.hasError) {
-            if (this.props.fallback) {
-                return this.props.fallback;
-            }
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error:', error, errorInfo);
+  }
 
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
-                    <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg
-                                className="w-8 h-8 text-red-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                />
-                            </svg>
-                        </div>
-                        <h1 className="text-xl font-black uppercase tracking-widest text-zinc-800 mb-2">
-                            Algo salió mal
-                        </h1>
-                        <p className="text-zinc-500 text-sm mb-6">
-                            Ha ocurrido un error inesperado. No te preocupes, puedes intentar recargar la página.
-                        </p>
-                        {this.state.error && (
-                            <details className="text-left mb-6">
-                                <summary className="text-xs font-medium text-zinc-400 cursor-pointer hover:text-zinc-600">
-                                    Ver detalles del error
-                                </summary>
-                                <pre className="mt-2 p-3 bg-zinc-50 rounded-lg text-xs text-red-600 overflow-auto max-h-40">
-                                    {this.state.error.message}
-                                </pre>
-                            </details>
-                        )}
-                        <button
-                            onClick={this.handleReset}
-                            className="w-full bg-black text-white font-bold uppercase tracking-widest text-xs py-3 px-6 rounded-xl hover:bg-zinc-800 transition-colors"
-                        >
-                            Recargar página
-                        </button>
-                    </div>
-                </div>
-            );
-        }
+  private t(key: keyof typeof translations.es): string {
+    const { locale } = this.state;
+    return translations[locale][key] || translations.es[key] || key;
+  }
 
-        return this.props.children;
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-zinc-50 animate-fade">
+          <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-10 md:p-16 w-full max-w-2xl text-center space-y-10">
+            <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <i className="fas fa-exclamation-triangle text-4xl"></i>
+            </div>
+            
+            <div className="space-y-4">
+              <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter">
+                {this.t('error.title')}
+              </h1>
+              <p className="text-zinc-400 text-xs md:text-sm font-bold uppercase tracking-widest leading-relaxed max-w-sm mx-auto">
+                {this.t('error.description')}
+              </p>
+            </div>
+
+            {this.state.error && (
+              <div className="bg-zinc-50 rounded-3xl p-6 text-left border border-zinc-100 overflow-hidden">
+                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-300 mb-2">{this.t('error.details')}</p>
+                <code className="text-[10px] text-red-500 font-mono break-all line-clamp-3">
+                  {this.state.error.toString()}
+                </code>
+              </div>
+            )}
+
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-5 bg-black text-white rounded-full text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10"
+            >
+              {this.t('error.reload')}
+            </button>
+          </div>
+        </div>
+      );
     }
-}
 
-export default ErrorBoundary;
+    return this.props.children;
+  }
+}

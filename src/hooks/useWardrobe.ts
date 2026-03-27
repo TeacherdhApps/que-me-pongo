@@ -6,9 +6,10 @@ import {
     updateClothingItem, 
     deleteClothingItem, 
     loadWeeklyPlan, 
-    saveWeeklyPlan 
+    saveWeeklyPlan,
+    clearAllData
 } from '../lib/wardrobeStorage';
-import type { ClothingItem, Category, DailyOutfit } from '../types';
+import type { ClothingItem, Category, DailyOutfit, WeeklyPlan } from '../types';
 
 class SerialQueue {
     private promise: Promise<void> = Promise.resolve();
@@ -137,6 +138,13 @@ export function useWardrobe() {
         update: updateMutation.mutateAsync, 
         remove: deleteMutation.mutateAsync, 
         bulkRemove: bulkDeleteMutation.mutateAsync,
+        resetWardrobe: clearAllData,
+        bulkAdd: async (items: ClothingItem[]) => {
+            // Using for...of with await to avoid overwhelming the queue/storage
+            for (const item of items) {
+                await addClothingItem(item);
+            }
+        },
         filterByCategory 
     };
 }
@@ -153,17 +161,15 @@ export function useWeeklyPlan() {
     const updateDayMutation = useMutation({
         mutationKey: ['update-weekly-plan'],
         mutationFn: async ({ day, nextOutfit }: { day: string; nextOutfit: DailyOutfit }) => {
-            // Read the latest optimistic cache and merge our change into it
-            const latestPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
+            const latestPlan = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']) || {};
             const fullPlan = { ...latestPlan, [day]: nextOutfit };
             return saveWeeklyPlan(fullPlan);
         },
         onMutate: async ({ day, nextOutfit }) => {
             await queryClient.cancelQueries({ queryKey: ['weekly-plan'] });
-            const previousPlan = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']);
+            const previousPlan = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']);
 
-            // Optimistic update: immediately reflect in UI
-            queryClient.setQueryData(['weekly-plan'], (old: Record<string, DailyOutfit> = {}) => ({
+            queryClient.setQueryData(['weekly-plan'], (old: WeeklyPlan = {}) => ({
                 ...old,
                 [day]: nextOutfit
             }));
@@ -175,10 +181,7 @@ export function useWeeklyPlan() {
                 queryClient.setQueryData(['weekly-plan'], context.previousPlan);
             }
         },
-        onSuccess: () => {
-            // Delay the refetch to give Supabase time to commit the write.
-            // This prevents the immediate refetch from returning stale cloud data
-            // that overwrites our optimistic update.
+        onSettled: () => {
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
             }, 2000);
@@ -187,7 +190,7 @@ export function useWeeklyPlan() {
 
     const updateDay = useCallback(async (day: string, update: DailyOutfit | ((old: DailyOutfit) => DailyOutfit)) => {
         return planQueue.enqueue(async () => {
-            const currentCache = queryClient.getQueryData<Record<string, DailyOutfit>>(['weekly-plan']) || {};
+            const currentCache = queryClient.getQueryData<WeeklyPlan>(['weekly-plan']) || {};
             const oldOutfit = currentCache[day] || { day: day, items: [], date: day };
             const nextOutfit = typeof update === 'function' ? update(oldOutfit) : update;
             
@@ -198,6 +201,7 @@ export function useWeeklyPlan() {
     return { 
         plan, 
         isLoading, 
-        updateDay 
+        updateDay,
+        bulkUpdatePlan: saveWeeklyPlan
     };
 }

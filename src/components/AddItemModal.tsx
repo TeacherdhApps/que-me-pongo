@@ -6,6 +6,16 @@ import { uploadImage } from '../lib/wardrobeStorage';
 import { supabase } from '../lib/supabase';
 import { ImageUploadProgress } from './ui/LoadingStates';
 import { FREE_ITEM_LIMIT } from '../lib/pricing';
+import { useI18n } from '../i18n/I18nContext';
+import type { TranslationKey } from '../i18n/translations';
+
+// Map category values to translation keys
+const categoryTranslationKeys: Record<string, TranslationKey> = {
+    [Categories.OUTERWEAR]: 'category.outerwear',
+    [Categories.TOP]: 'category.top',
+    [Categories.BOTTOM]: 'category.bottom',
+    [Categories.SHOES]: 'category.shoes',
+};
 
 interface AddItemModalProps {
     onClose: () => void;
@@ -14,6 +24,7 @@ interface AddItemModalProps {
 }
 
 export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps) {
+    const { t } = useI18n();
     const [name, setName] = useState('');
     const [category, setCategory] = useState<Category>(Categories.TOP);
     const [image, setImage] = useState<string>('');
@@ -30,7 +41,10 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
     const handleFile = async (file: File) => {
         if (isOverLimit) {
             const remainingItems = itemLimit - currentCount;
-            alert(`⚠️ Límite de almacenamiento alcanzado\n\nHas usado ${currentCount} de ${itemLimit} prendas disponibles.\n\n${remainingItems <= 0 ? '¡Actualiza tu plan o compra un pack de prendas para seguir agregando!' : `Te quedan ${remainingItems} prendas disponibles.`}`);
+            const message = remainingItems <= 0 
+                ? t('addItem.limitAlertUpgrade') 
+                : t('addItem.limitAlertRemaining', { remaining: String(remainingItems) });
+            alert(t('addItem.limitAlert', { current: String(currentCount), limit: String(itemLimit), message }));
             return;
         }
         setIsProcessing(true);
@@ -41,7 +55,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
             setImage(compressed);
         } catch (err) {
             console.error('Error processing image:', err);
-            alert('Error al procesar la imagen. Intenta con otra.');
+            alert(t('addItem.imageError'));
         } finally {
             setIsProcessing(false);
         }
@@ -70,7 +84,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
     const submit = async () => {
         if (!name || !image) return;
         if (isOverLimit) {
-            alert('⚠️ Límite alcanzado\n\nNo puedes agregar más prendas. Actualiza tu plan o compra un pack de prendas adicional.');
+            alert(t('addItem.limitAlertNoAdd'));
             return;
         }
         setIsUploading(true);
@@ -92,7 +106,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
             onClose();
         } catch (err: any) {
             console.error('Submit error:', err);
-            alert('Error al guardar la prenda. Por favor intenta de nuevo.');
+            alert(t('addItem.saveError'));
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -104,7 +118,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/90 backdrop-blur-xl animate-fade">
             <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-10 w-full max-w-lg space-y-8">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black uppercase tracking-tight">Nueva Pieza</h3>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">{t('addItem.title')}</h3>
                     <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-50 rounded-full hover:bg-zinc-100 transition-colors">
                         <i className="fas fa-times text-zinc-400"></i>
                     </button>
@@ -114,10 +128,10 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                 <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">
-                            Plan Gratuito
+                            {t('addItem.freePlan')}
                         </span>
                         <span className={`text-[8px] font-black uppercase tracking-widest ${isOverLimit ? 'text-red-500' : 'text-zinc-400'}`}>
-                            {currentCount} / {itemLimit} prendas
+                            {currentCount} / {itemLimit} {t('addItem.garments')}
                         </span>
                     </div>
                     <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
@@ -128,7 +142,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                     </div>
                     {isOverLimit && (
                         <p className="text-[7px] font-bold text-red-500 uppercase tracking-widest mt-2">
-                            ⚠️ Límite alcanzado
+                            {t('addItem.limitReached')}
                         </p>
                     )}
                 </div>
@@ -147,13 +161,13 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                     {isProcessing ? (
                         <div className="flex flex-col items-center gap-3">
                             <i className="fas fa-circle-notch fa-spin text-2xl text-zinc-300"></i>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Procesando...</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{t('addItem.processing')}</p>
                         </div>
                     ) : image ? (
                         <div className="relative w-full h-full group">
                             <img src={image} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <p className="text-white font-bold text-xs uppercase tracking-widest">Cambiar foto</p>
+                                <p className="text-white font-bold text-xs uppercase tracking-widest">{t('addItem.changePhoto')}</p>
                             </div>
                         </div>
                     ) : (
@@ -162,7 +176,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                                 <i className="fas fa-image text-2xl text-zinc-300"></i>
                             </div>
                             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                                Arrastra una imagen aquí
+                                {t('addItem.dragHere')}
                             </p>
                             <div className="flex gap-3 justify-center">
                                 <button
@@ -170,14 +184,14 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                                     onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
                                     className="px-5 py-3 bg-black text-white rounded-full text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-2"
                                 >
-                                    <i className="fas fa-folder-open"></i> Buscar
+                                    <i className="fas fa-folder-open"></i> {t('addItem.browse')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
                                     className="px-5 py-3 bg-white border-2 border-black text-black rounded-full text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md flex items-center gap-2"
                                 >
-                                    <i className="fas fa-camera"></i> Tomar Foto
+                                    <i className="fas fa-camera"></i> {t('addItem.takePhoto')}
                                 </button>
                             </div>
                         </div>
@@ -201,10 +215,10 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
 
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Nombre</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">{t('addItem.name')}</label>
                         <input
                             type="text"
-                            placeholder="Ej. Camisa Oxford"
+                            placeholder={t('addItem.namePlaceholder')}
                             className="w-full bg-zinc-50 p-4 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-black/5"
                             value={name}
                             onChange={e => setName(e.target.value)}
@@ -212,7 +226,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">Categoría</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 ml-4">{t('addItem.category')}</label>
                         <div className="grid grid-cols-2 gap-2">
                             {Object.entries(Categories).map(([key, value]) => (
                                 <button
@@ -221,7 +235,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                                     className={`p-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all ${category === value ? 'bg-black text-white shadow-lg scale-105' : 'bg-zinc-50 text-zinc-400 hover:bg-zinc-100'
                                         }`}
                                 >
-                                    {value}
+                                    {t(categoryTranslationKeys[value])}
                                 </button>
                             ))}
                         </div>
@@ -233,7 +247,7 @@ export function AddItemModal({ onClose, onAdd, currentCount }: AddItemModalProps
                     disabled={!name || !image || isProcessing || isUploading}
                     className="w-full py-5 bg-black text-white rounded-full text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isProcessing ? 'Procesando...' : isUploading ? 'Subiendo...' : 'Guardar Pieza'}
+                    {isProcessing ? t('addItem.processing') : isUploading ? t('addItem.uploading') : t('addItem.save')}
                 </button>
             </div>
         </div>

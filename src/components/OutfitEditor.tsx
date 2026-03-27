@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useWeather } from '../hooks/useWeather';
+import { useI18n } from '../i18n/I18nContext';
 import type { ClothingItem, WeeklyPlan, DailyOutfit, Category } from '../types';
 import { Categories } from '../types';
+import type { TranslationKey } from '../i18n/translations';
 
 interface OutfitEditorProps {
     editingDay: { name: string, date: string };
@@ -11,9 +13,18 @@ interface OutfitEditorProps {
     onClose: () => void;
 }
 
+// Map category values to translation keys
+const categoryTranslationKeys: Record<string, TranslationKey> = {
+    [Categories.OUTERWEAR]: 'category.outerwear',
+    [Categories.TOP]: 'category.top',
+    [Categories.BOTTOM]: 'category.bottom',
+    [Categories.SHOES]: 'category.shoes',
+};
+
 export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose }: OutfitEditorProps) {
     const { wardrobe } = useWardrobe();
     const { weather } = useWeather();
+    const { t } = useI18n();
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const categoriesRef = useRef<HTMLDivElement>(null);
 
@@ -115,7 +126,7 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                             onClick={handleClose}
                             className="bg-black text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-transform"
                         >
-                            Listo
+                            {t('outfit.done')}
                         </button>
                     </div>
                 </div>
@@ -140,11 +151,11 @@ export function OutfitEditor({ editingDay, plan: initialPlan, updateDay, onClose
                                 >
                                     <div className="flex items-center gap-4">
                                         <i className={`fas ${icon} text-[10px] ${isOpen ? 'text-white' : 'text-zinc-400'}`}></i>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{key}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t(categoryTranslationKeys[key])}</span>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <span className={`text-[10px] font-bold ${isOpen ? 'text-zinc-500' : 'text-zinc-300'}`}>
-                                            {items.length} {items.length === 1 ? 'pieza' : 'piezas'}
+                                            {items.length} {items.length === 1 ? t('closet.piece') : t('closet.pieces')}
                                         </span>
                                         <i className={`fas fa-chevron-down text-[8px] transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
                                     </div>

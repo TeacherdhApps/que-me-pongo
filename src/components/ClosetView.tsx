@@ -6,7 +6,9 @@ import { StorageHealth } from './StorageHealth';
 import { TodayOutfitWidget } from './TodayOutfitWidget';
 import { Categories } from '../types';
 import { FREE_ITEM_LIMIT } from '../lib/pricing';
+import { useI18n } from '../i18n/I18nContext';
 import type { Category, ClothingItem } from '../types';
+import type { TranslationKey } from '../i18n/translations';
 
 const categoryLabels: { key: Category; icon: string }[] = [
     { key: Categories.OUTERWEAR, icon: 'fa-vest' },
@@ -15,15 +17,25 @@ const categoryLabels: { key: Category; icon: string }[] = [
     { key: Categories.SHOES, icon: 'fa-shoe-prints' },
 ];
 
+// Map category values to translation keys
+const categoryTranslationKeys: Record<string, TranslationKey> = {
+    [Categories.OUTERWEAR]: 'category.outerwear',
+    [Categories.TOP]: 'category.top',
+    [Categories.BOTTOM]: 'category.bottom',
+    [Categories.SHOES]: 'category.shoes',
+};
+
 interface ClothingCardProps {
     item: ClothingItem;
     onRemove: (id: string, url: string) => void;
     isSelectionMode: boolean;
     isSelected: boolean;
     onToggleSelect: (id: string) => void;
+    confirmDeleteText: string;
+    deleteErrorText: string;
 }
 
-const ClothingCard = memo(({ item, onRemove, isSelectionMode, isSelected, onToggleSelect }: ClothingCardProps) => {
+const ClothingCard = memo(({ item, onRemove, isSelectionMode, isSelected, onToggleSelect, confirmDeleteText, deleteErrorText }: ClothingCardProps) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     const handleClick = () => {
@@ -67,12 +79,12 @@ const ClothingCard = memo(({ item, onRemove, isSelectionMode, isSelected, onTogg
                     <button
                         onClick={async (e) => {
                             e.stopPropagation();
-                            if (window.confirm('¿Estás seguro de que quieres eliminar esta prenda?')) {
+                            if (window.confirm(confirmDeleteText)) {
                                 try {
                                     await onRemove(item.id, item.image);
                                 } catch (err) {
                                     console.error('Delete error:', err);
-                                    alert('No se pudo eliminar la prenda. Por favor, intenta de nuevo.');
+                                    alert(deleteErrorText);
                                 }
                             }
                         }}
@@ -94,6 +106,7 @@ ClothingCard.displayName = 'ClothingCard';
 export function ClosetView() {
     const { wardrobe, isLoading, add, remove, bulkRemove } = useWardrobe();
     useUserProfile();
+    const { t } = useI18n();
     const [showModal, setShowModal] = useState(false);
     const [openSection, setOpenSection] = useState<Category | null>(null);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -118,7 +131,7 @@ export function ClosetView() {
 
     const handleBulkRemove = async () => {
         const count = selectedIds.size;
-        if (window.confirm(`¿Estás seguro de que quieres eliminar estas ${count} prendas?`)) {
+        if (window.confirm(t('closet.confirmBulkDelete', { count: String(count) }))) {
             const itemsToRemove = wardrobe
                 .filter(i => selectedIds.has(i.id))
                 .map(i => ({ id: i.id, imageUrl: i.image }));
@@ -128,7 +141,7 @@ export function ClosetView() {
                 setSelectedIds(new Set());
                 setIsSelectionMode(false);
             } catch (err) {
-                alert('Error al eliminar las prendas.');
+                alert(t('closet.bulkDeleteError'));
             }
         }
     };
@@ -137,7 +150,7 @@ export function ClosetView() {
         return (
             <div className="flex flex-col items-center justify-center py-40 gap-4 animate-pulse">
                 <i className="fas fa-circle-notch fa-spin text-4xl text-black"></i>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Cargando Armario...</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">{t('closet.loading')}</p>
             </div>
         );
     }
@@ -149,10 +162,10 @@ export function ClosetView() {
 
             <div className="flex justify-between items-end mb-16">
                 <div>
-                    <h2 className="text-4xl font-black uppercase tracking-tighter">Mi Colección</h2>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter">{t('closet.title')}</h2>
                     <div className="flex gap-4 mt-2">
                         <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">
-                            {wardrobe.length} Piezas totales
+                            {wardrobe.length} {t('closet.totalPieces')}
                         </p>
                         <button 
                             onClick={() => {
@@ -161,7 +174,7 @@ export function ClosetView() {
                             }}
                             className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full transition-all ${isSelectionMode ? 'bg-black text-white' : 'text-zinc-400 hover:bg-zinc-100'}`}
                         >
-                            {isSelectionMode ? 'Cancelar' : 'Seleccionar'}
+                            {isSelectionMode ? t('closet.cancel') : t('closet.select')}
                         </button>
                     </div>
                 </div>
@@ -187,6 +200,7 @@ export function ClosetView() {
                 {categoryLabels.map(({ key, icon }) => {
                     const items = wardrobe.filter(i => i.category === key);
                     const isOpen = openSection === key;
+                    const catLabel = t(categoryTranslationKeys[key]);
 
                     return (
                         <div key={key}>
@@ -196,11 +210,11 @@ export function ClosetView() {
                             >
                                 <div className="flex items-center gap-4">
                                     <i className={`fas ${icon} text-sm ${isOpen ? 'text-white' : 'text-zinc-400'}`}></i>
-                                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">{key}</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">{catLabel}</span>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <span className={`text-[10px] font-bold ${isOpen ? 'text-zinc-400' : 'text-zinc-300'}`}>
-                                        {items.length} {items.length === 1 ? 'pieza' : 'piezas'}
+                                        {items.length} {items.length === 1 ? t('closet.piece') : t('closet.pieces')}
                                     </span>
                                     <i className={`fas fa-chevron-down text-[8px] transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
                                 </div>
@@ -210,7 +224,7 @@ export function ClosetView() {
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-10 gap-x-6 pt-8 pb-4 px-2">
                                     {items.length === 0 ? (
                                         <p className="col-span-full text-center text-zinc-300 text-xs font-bold uppercase tracking-widest py-8">
-                                            Sin prendas en esta categoría
+                                            {t('closet.emptyCategory')}
                                         </p>
                                     ) : (
                                         items.map(item => (
@@ -221,6 +235,8 @@ export function ClosetView() {
                                                 isSelectionMode={isSelectionMode}
                                                 isSelected={selectedIds.has(item.id)}
                                                 onToggleSelect={toggleSelect}
+                                                confirmDeleteText={t('closet.confirmDelete')}
+                                                deleteErrorText={t('closet.deleteError')}
                                             />
                                         ))
                                     )}
@@ -236,14 +252,14 @@ export function ClosetView() {
                 <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4">
                     <div className="bg-black text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-8 border border-white/10 backdrop-blur-xl">
                         <span className="text-xs font-black uppercase tracking-widest">
-                            {selectedIds.size} seleccionadas
+                            {selectedIds.size} {t('closet.selected')}
                         </span>
                         <div className="w-px h-4 bg-white/20"></div>
                         <button 
                             onClick={handleBulkRemove}
                             className="text-red-400 hover:text-red-300 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"
                         >
-                            <i className="fas fa-trash-alt"></i> Borrar
+                            <i className="fas fa-trash-alt"></i> {t('closet.delete')}
                         </button>
                     </div>
                 </div>
@@ -251,7 +267,7 @@ export function ClosetView() {
 
             {wardrobe.length === 0 && (
                 <div className="text-center py-20 opacity-50">
-                    <p className="text-zinc-300 font-bold uppercase tracking-widest">Tu armario está vacío</p>
+                    <p className="text-zinc-300 font-bold uppercase tracking-widest">{t('closet.emptyCloset')}</p>
                 </div>
             )}
 

@@ -5,10 +5,13 @@ import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
 import { useWeather } from '../hooks/useWeather';
 import { WeatherIcon } from './WeatherIcon';
+import { useI18n } from '../i18n/I18nContext';
+import type { TranslationKey } from '../i18n/translations';
 
 export function TodayOutfitWidget() {
     const { plan, updateDay, isLoading } = useWeeklyPlan();
     const { weather } = useWeather();
+    const { t } = useI18n();
     const [isEditing, setIsEditing] = useState(false);
     const [isViewing, setIsViewing] = useState(false);
 
@@ -18,14 +21,17 @@ export function TodayOutfitWidget() {
     const d = String(todayDate.getDate()).padStart(2, '0');
     const dateKey = `${y}-${m}-${d}`;
 
-    const dayName = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][todayDate.getDay()];
+    const daysKeys: TranslationKey[] = [
+        'day.sunday', 'day.monday', 'day.tuesday', 'day.wednesday', 'day.thursday', 'day.friday', 'day.saturday'
+    ];
+    const dayName = t(daysKeys[todayDate.getDay()]);
     const displayDate = `${d}/${m}/${y}`;
 
     const todayOutfit = plan[dateKey] || { day: dayName, date: dateKey, items: [] };
     const items = todayOutfit.items;
 
     const handleClear = async () => {
-        if (window.confirm('¿Quieres quitar todas las prendas de hoy?')) {
+        if (window.confirm(t('today.confirmClear'))) {
             await updateDay(dateKey, { ...todayOutfit, items: [] });
         }
     };
@@ -41,10 +47,10 @@ export function TodayOutfitWidget() {
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                     <div className="flex flex-col">
                         <div className="flex items-center gap-3 mb-2">
-                            <span className="bg-white text-black text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest">Hoy</span>
+                            <span className="bg-white text-black text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest">{t('today.today')}</span>
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{dayName} {displayDate}</span>
                         </div>
-                        <h3 className="text-3xl font-black uppercase tracking-tighter">Tu Outfit</h3>
+                        <h3 className="text-3xl font-black uppercase tracking-tighter">{t('today.yourOutfit')}</h3>
                         {weather && (
                             <div className="flex items-center gap-2 mt-2 text-zinc-400">
                                 <WeatherIcon condition={weather.condition} code={weather.code} className="w-4 h-4" />
@@ -85,12 +91,12 @@ export function TodayOutfitWidget() {
                                         onClick={() => setIsViewing(true)}
                                         className="text-[10px] font-black uppercase tracking-widest px-6 py-3 bg-zinc-800 text-white rounded-full hover:bg-white hover:text-black transition-all"
                                     >
-                                        VER
+                                        {t('today.view')}
                                     </button>
                                     <button
                                         onClick={handleClear}
                                         className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 text-zinc-400 hover:bg-red-500 hover:text-white transition-all"
-                                        title="Limpiar"
+                                        title={t('today.clear')}
                                     >
                                         <i className="fas fa-trash-alt text-[10px]"></i>
                                     </button>
@@ -100,7 +106,7 @@ export function TodayOutfitWidget() {
                                 onClick={() => setIsEditing(true)}
                                 className="text-[10px] font-black uppercase tracking-widest px-8 py-3 bg-white text-black rounded-full hover:bg-zinc-200 transition-all shadow-xl"
                             >
-                                {items.length > 0 ? 'EDITAR' : 'CREAR OUTFIT'}
+                                {items.length > 0 ? t('today.edit') : t('today.createOutfit')}
                             </button>
                         </div>
                     </div>

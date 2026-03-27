@@ -1,3 +1,6 @@
+
+import { useI18n } from '../../i18n/I18nContext';
+
 interface LoadingSpinnerProps {
     size?: 'sm' | 'md' | 'lg';
     text?: string;
@@ -41,6 +44,8 @@ interface AIStreamingProps {
 }
 
 export function AIStreaming({ content, isLoading, error, onRetry }: AIStreamingProps) {
+    const { t } = useI18n();
+
     if (isLoading) {
         return (
             <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 rounded-3xl p-8 border border-violet-100">
@@ -49,7 +54,7 @@ export function AIStreaming({ content, isLoading, error, onRetry }: AIStreamingP
                         <i className="fas fa-sparkles text-white text-xs"></i>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-violet-600">
-                        IA Generando...
+                        {t('loading.aiGenerating')}
                     </span>
                 </div>
                 <div className="space-y-3">
@@ -69,7 +74,7 @@ export function AIStreaming({ content, isLoading, error, onRetry }: AIStreamingP
                         <i className="fas fa-exclamation-triangle text-red-500 text-xs"></i>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-red-600">
-                        Error de IA
+                        {t('loading.aiError')}
                     </span>
                 </div>
                 <p className="text-sm text-red-600 mb-4">{error}</p>
@@ -78,7 +83,7 @@ export function AIStreaming({ content, isLoading, error, onRetry }: AIStreamingP
                         onClick={onRetry}
                         className="text-[10px] font-black uppercase tracking-widest px-6 py-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all"
                     >
-                        Reintentar
+                        {t('loading.retry')}
                     </button>
                 )}
             </div>
@@ -93,7 +98,7 @@ export function AIStreaming({ content, isLoading, error, onRetry }: AIStreamingP
                         <i className="fas fa-sparkles text-white text-xs"></i>
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-violet-600">
-                        Recomendación IA
+                        {t('loading.aiRecommendation')}
                     </span>
                 </div>
                 <div className="prose prose-sm max-w-none">
@@ -115,6 +120,7 @@ interface ImageUploadProgressProps {
 }
 
 export function ImageUploadProgress({ isUploading, progress }: ImageUploadProgressProps) {
+    const { t } = useI18n();
     if (!isUploading) return null;
 
     return (
@@ -125,10 +131,10 @@ export function ImageUploadProgress({ isUploading, progress }: ImageUploadProgre
                 </div>
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-800 mb-2">
-                        Subiendo Imagen
+                        {t('loading.uploadingImage')}
                     </p>
                     <p className="text-[8px] text-zinc-400 uppercase tracking-widest">
-                        Guardando en la nube...
+                        {t('loading.savingToCloud')}
                     </p>
                 </div>
                 <div className="w-full h-2 bg-zinc-100 rounded-full overflow-hidden">

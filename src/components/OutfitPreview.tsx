@@ -2,12 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ClothingItem, DailyOutfit, CanvasLayout, Position, Category } from '../types';
 import { Categories } from '../types';
 import { useWardrobe } from '../hooks/useWardrobe';
+import { useI18n } from '../i18n/I18nContext';
+import type { TranslationKey } from '../i18n/translations';
 
 interface OutfitPreviewProps {
     outfit: DailyOutfit;
     onClose: () => void;
     onSave: (updates: Partial<DailyOutfit>) => Promise<void>;
 }
+
+// Map category values to translation keys
+const categoryTranslationKeys: Record<string, TranslationKey> = {
+    [Categories.OUTERWEAR]: 'category.outerwear',
+    [Categories.TOP]: 'category.top',
+    [Categories.BOTTOM]: 'category.bottom',
+    [Categories.SHOES]: 'category.shoes',
+};
 
 interface DraggableItemProps {
     item: ClothingItem;
@@ -124,6 +134,7 @@ const DraggableItem = ({ item, position, onUpdate, bringToFront, onRemove }: Dra
 
 export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     const { wardrobe } = useWardrobe();
+    const { t } = useI18n();
     const [canvasItems, setCanvasItems] = useState<ClothingItem[]>(outfit.items);
     const [layout, setLayout] = useState<CanvasLayout>(outfit.canvasLayout || {});
     const [background, setBackground] = useState(outfit.canvasBackground || 'dots');
@@ -188,18 +199,18 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
             onClose();
         } catch (err) {
             console.error('Error saving outfit layout:', err);
-            alert('Error al guardar el diseño.');
+            alert(t('outfit.saveError'));
         } finally {
             setIsSaving(false);
         }
     };
 
     const backgrounds = [
-        { id: 'dots', name: 'Original', class: 'bg-zinc-50', style: { backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' } },
-        { id: 'marble', name: 'Mármol', class: 'bg-white', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/white-marble.png")' } },
-        { id: 'wood', name: 'Madera', class: 'bg-[#fdfcf0]', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/wood-pattern.png")' } },
-        { id: 'studio', name: 'Estudio', class: 'bg-gradient-to-b from-zinc-100 to-zinc-300' },
-        { id: 'minimal', name: 'Limpio', class: 'bg-white' }
+        { id: 'dots', name: t('outfit.bgOriginal'), class: 'bg-zinc-50', style: { backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' } },
+        { id: 'marble', name: t('outfit.bgMarble'), class: 'bg-white', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/white-marble.png")' } },
+        { id: 'wood', name: t('outfit.bgWood'), class: 'bg-[#fdfcf0]', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/wood-pattern.png")' } },
+        { id: 'studio', name: t('outfit.bgStudio'), class: 'bg-gradient-to-b from-zinc-100 to-zinc-300' },
+        { id: 'minimal', name: t('outfit.bgClean'), class: 'bg-white' }
     ];
 
     return (
@@ -207,9 +218,9 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
             <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-6 md:p-8 w-full max-w-4xl flex flex-col items-center overflow-hidden h-[90vh]">
                 <div className="w-full flex justify-between items-center mb-6 px-2">
                     <div>
-                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">Crea tu Look</h3>
+                        <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">{t('outfit.createLook')}</h3>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
-                            {outfit.day} · {canvasItems.length} Prendas
+                            {outfit.day} · {canvasItems.length} {t('outfit.garments')}
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -217,7 +228,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                             onClick={() => setShowItemPicker(true)}
                             className="h-10 px-4 flex items-center gap-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
                         >
-                            <i className="fas fa-plus"></i> Añadir Prenda
+                            <i className="fas fa-plus"></i> {t('outfit.addGarment')}
                         </button>
                         <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors">
                             <i className="fas fa-times text-zinc-500"></i>
@@ -259,7 +270,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                     <div className="absolute bottom-4 left-4 flex gap-2">
                         <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 flex items-center gap-2 rounded-full border border-zinc-100 shadow-sm pointer-events-none">
                             <i className="fas fa-wand-magic-sparkles text-[10px] text-zinc-400"></i>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Moodboard Personalizado</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{t('outfit.moodboard')}</span>
                         </div>
                     </div>
                 </div>
@@ -269,14 +280,14 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                         onClick={onClose}
                         className="flex-1 py-4 bg-zinc-100 text-zinc-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
                     >
-                        Cancelar
+                        {t('outfit.cancel')}
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
                         className="flex-[2] py-4 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50"
                     >
-                        {isSaving ? 'Guardando...' : 'Guardar y Cerrar'}
+                        {isSaving ? t('outfit.saving') : t('outfit.saveAndClose')}
                     </button>
                 </div>
             </div>
@@ -287,8 +298,8 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                     <div className="bg-white rounded-[3rem] p-6 md:p-10 w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tight">Tu Armario</h3>
-                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Selecciona por categoría</p>
+                                <h3 className="text-2xl font-black uppercase tracking-tight">{t('outfit.yourCloset')}</h3>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">{t('outfit.selectByCategory')}</p>
                             </div>
                             <button onClick={() => { setShowItemPicker(false); setPickerOpenSection(null); }} className="w-10 h-10 flex items-center justify-center bg-zinc-50 rounded-full hover:bg-zinc-100 transition-colors">
                                 <i className="fas fa-times text-zinc-400"></i>
@@ -313,11 +324,11 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <i className={`fas ${icon} text-[10px] ${isOpen ? 'text-white' : 'text-zinc-400'}`}></i>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{key}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t(categoryTranslationKeys[key])}</span>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className={`text-[10px] font-bold ${isOpen ? 'text-zinc-500' : 'text-zinc-300'}`}>
-                                                    {availableItems.length} {availableItems.length === 1 ? 'pieza' : 'piezas'}
+                                                    {availableItems.length} {availableItems.length === 1 ? t('closet.piece') : t('closet.pieces')}
                                                 </span>
                                                 <i className={`fas fa-chevron-down text-[8px] transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
                                             </div>
@@ -337,7 +348,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                                                     >
                                                         <img src={witem.image} className="w-full h-full object-cover rounded-xl transition-transform group-hover:scale-110" alt={witem.name} />
                                                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex flex-col items-center justify-center transition-all opacity-0 group-hover:opacity-100 rounded-2xl">
-                                                            <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-lg">Añadir</span>
+                                                            <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-lg">{t('outfit.add')}</span>
                                                         </div>
                                                         <div className="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-sm py-1.5 px-2 text-[8px] font-bold text-white uppercase tracking-widest translate-y-full transition-transform group-hover:translate-y-0 rounded-b-xl">
                                                             {witem.name}

@@ -23,6 +23,6 @@ export function useUserProfile() {
     return { 
         profile, 
         isLoading, 
-        update: updateMutation.mutateAsync 
+        updateProfile: updateMutation.mutateAsync 
     };
 }

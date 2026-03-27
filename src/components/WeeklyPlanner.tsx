@@ -4,7 +4,9 @@ import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
 import { openGoogleCalendar } from '../lib/calendarSync';
+import { useI18n } from '../i18n/I18nContext';
 import type { ClothingItem } from '../types';
+import type { TranslationKey } from '../i18n/translations';
 
 interface DayInfo {
     name: string;
@@ -12,12 +14,16 @@ interface DayInfo {
     displayDate: string;
 }
 
-const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
+const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, editLabel, hoyLabel, emptyLabel }: {
     day: DayInfo;
     items: ClothingItem[];
     onEdit: (day: DayInfo) => void;
     onView: (day: DayInfo) => void;
     isToday: boolean;
+    viewLabel: string;
+    editLabel: string;
+    hoyLabel: string;
+    emptyLabel: string;
 }) => {
     return (
         <div className={`rounded-[2rem] p-5 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 group transition-colors animate-fade ${isToday ? 'bg-black text-white ring-4 ring-black/10' : 'bg-zinc-50 hover:bg-zinc-100'}`}>
@@ -26,7 +32,7 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isToday ? 'text-white' : 'text-black'}`}>{day.name}</span>
                         {isToday && (
-                            <span className="bg-white text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-sm">Hoy</span>
+                            <span className="bg-white text-black text-[7px] font-black uppercase px-1.5 py-0.5 rounded-sm">{hoyLabel}</span>
                         )}
                     </div>
                     <span className={`text-[10px] font-bold mt-1 ${isToday ? 'text-zinc-400' : 'text-zinc-700'}`}>{day.displayDate}</span>
@@ -42,7 +48,7 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
                         />
                     ))}
                     {items.length === 0 && (
-                        <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Outfit vacío</span>
+                        <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{emptyLabel}</span>
                     )}
                 </div>
             </div>
@@ -52,14 +58,14 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday }: {
                         onClick={() => onView(day)}
                         className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full transition-all ${isToday ? 'bg-zinc-800 text-white hover:bg-white hover:text-black' : 'bg-zinc-100 hover:bg-black hover:text-white'}`}
                     >
-                        VER
+                        {viewLabel}
                     </button>
                 )}
                 <button
                     onClick={() => onEdit(day)}
                     className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full shadow-sm transition-all border ${isToday ? 'bg-white text-black hover:bg-zinc-200 border-white' : 'bg-white hover:bg-zinc-50 border-zinc-100'}`}
                 >
-                    EDITAR
+                    {editLabel}
                 </button>
             </div>
         </div>
@@ -91,6 +97,7 @@ const WeeklySkeleton = () => (
 
 export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 'month') => void }) {
     const { plan, isLoading, updateDay } = useWeeklyPlan();
+    const { t } = useI18n();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [editingDay, setEditingDay] = useState<DayInfo | null>(null);
     const [viewingDay, setViewingDay] = useState<DayInfo | null>(null);
@@ -107,6 +114,10 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         const startOfWeek = new Date(currentDate);
         startOfWeek.setDate(currentDate.getDate() - dayOfWeek);
 
+        const dayKeys: TranslationKey[] = [
+            'day.monday', 'day.tuesday', 'day.wednesday', 'day.thursday', 'day.friday', 'day.saturday', 'day.sunday'
+        ];
+
         return Array.from({ length: 7 }, (_, i) => {
             const date = new Date(startOfWeek);
             date.setDate(startOfWeek.getDate() + i);
@@ -114,7 +125,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
             const mm = String(date.getMonth() + 1).padStart(2, '0');
             const yyyy = date.getFullYear();
             return {
-                name: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][i],
+                name: t(dayKeys[i]),
                 date: formatDateKey(date),
                 displayDate: `${dd}/${mm}/${yyyy}`
             };
@@ -132,11 +143,12 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
 
     const handleGoogleCalendar = () => {
         // Export today's outfit or first available
-        const today = weekDays.find(d => d.date === formatDateKey(new Date()));
-        if (today && plan[today.date]?.items.length > 0) {
-            openGoogleCalendar(plan[today.date]);
+        const todayStr = formatDateKey(new Date());
+        const todayKey = weekDays.find(d => d.date === todayStr);
+        if (todayKey && plan[todayKey.date]?.items.length > 0) {
+            openGoogleCalendar(plan[todayKey.date]);
         } else {
-            alert('No hay un outfit planificado para hoy. Planifica un día primero.');
+            alert(t('weekly.noOutfitToday'));
         }
     };
 
@@ -144,7 +156,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         <div className="animate-fade">
             <div className="flex justify-between items-end mb-12">
                 <div>
-                    <h2 className="text-4xl font-black uppercase tracking-tighter">Itinerario Semanal</h2>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter">{t('weekly.title')}</h2>
                     <div className="flex gap-4 mt-2 items-center">
                         <button
                             onClick={() => changeWeek(-1)}
@@ -163,7 +175,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                                 onClick={() => setCurrentDate(new Date())}
                                 className="text-[9px] font-black uppercase tracking-widest px-3 py-1 bg-black text-white rounded-full hover:scale-105 transition-transform animate-fade"
                             >
-                                Hoy
+                                {t('weekly.today')}
                             </button>
                         )}
                     </div>
@@ -172,13 +184,13 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                             onClick={() => onViewChange('week')}
                             className="text-[10px] font-black uppercase tracking-widest border-b-2 border-black pb-1"
                         >
-                            Semana
+                            {t('weekly.week')}
                         </button>
                         <button
                             onClick={() => onViewChange('month')}
                             className="text-[10px] font-black uppercase tracking-widest opacity-30 hover:opacity-100 transition-opacity pb-1"
                         >
-                            Mes
+                            {t('weekly.month')}
                         </button>
                     </div>
                 </div>
@@ -207,6 +219,10 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                                 onEdit={setEditingDay}
                                 onView={setViewingDay}
                                 isToday={isToday}
+                                viewLabel={t('weekly.view')}
+                                editLabel={t('weekly.edit')}
+                                hoyLabel={t('weekly.today')}
+                                emptyLabel={t('weekly.emptyOutfit')}
                             />
                         );
                     })}
