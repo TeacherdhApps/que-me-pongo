@@ -7,7 +7,7 @@ export const translations = {
     // App Header
     'app.title': '¿Qué me pongo?',
     'app.subtitle': 'By: TeacherdhApps',
-    'app.footer': '© Marca registrada todos los derechos reservados | ¿Qué me pongo? 2026',
+    'app.footer': '✦ Hecho con estilo · TeacherdhApps © 2026',
 
     // Navigation
     'nav.closet': 'Armario',
@@ -183,6 +183,7 @@ export const translations = {
     'outfit.bgWood': 'Madera',
     'outfit.bgStudio': 'Estudio',
     'outfit.bgClean': 'Limpio',
+    'outfit.notesPlaceholder': 'Etiqueta o nota (ej. Boda, Aniversario, Reunión, Playa)',
 
     // Today Widget
     'today.today': 'Hoy',
@@ -241,13 +242,13 @@ export const translations = {
     'loading.savingToCloud': 'Guardando en la nube...',
 
     // Language
-    'lang.label': 'Spa',
+    'lang.label': 'ES',
   },
   en: {
     // App Header
     'app.title': 'What should I wear?',
     'app.subtitle': 'By: TeacherdhApps',
-    'app.footer': '© All rights reserved | What should I wear? 2026',
+    'app.footer': '✦ Crafted with style · TeacherdhApps © 2026',
 
     // Navigation
     'nav.closet': 'Closet',
@@ -423,6 +424,7 @@ export const translations = {
     'outfit.bgWood': 'Wood',
     'outfit.bgStudio': 'Studio',
     'outfit.bgClean': 'Clean',
+    'outfit.notesPlaceholder': 'Label or note (e.g. Wedding, Anniversary, Meeting, Beach)',
 
     // Today Widget
     'today.today': 'Today',
@@ -481,7 +483,7 @@ export const translations = {
     'loading.savingToCloud': 'Saving to cloud...',
 
     // Language
-    'lang.label': 'Eng',
+    'lang.label': 'IN',
   },
 } as const;
 

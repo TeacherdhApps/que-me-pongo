@@ -14,7 +14,7 @@ interface DayInfo {
     displayDate: string;
 }
 
-const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, editLabel, hoyLabel, emptyLabel }: {
+const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, editLabel, hoyLabel, emptyLabel, notes }: {
     day: DayInfo;
     items: ClothingItem[];
     onEdit: (day: DayInfo) => void;
@@ -24,11 +24,12 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, e
     editLabel: string;
     hoyLabel: string;
     emptyLabel: string;
+    notes?: string;
 }) => {
     return (
         <div className={`rounded-[2rem] p-5 lg:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-0 group transition-colors animate-fade ${isToday ? 'bg-black text-white ring-4 ring-black/10' : 'bg-zinc-50 hover:bg-zinc-100'}`}>
             <div className="flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-12 w-full">
-                <div className="w-auto md:w-24 flex flex-col">
+                <div className="w-auto md:w-32 flex flex-col">
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black uppercase tracking-widest ${isToday ? 'text-white' : 'text-black'}`}>{day.name}</span>
                         {isToday && (
@@ -36,6 +37,13 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, e
                         )}
                     </div>
                     <span className={`text-[10px] font-bold mt-1 ${isToday ? 'text-zinc-400' : 'text-zinc-700'}`}>{day.displayDate}</span>
+                    {notes && (
+                        <div className="mt-2 flex">
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isToday ? 'bg-zinc-800 text-zinc-300 border border-zinc-700' : 'bg-zinc-200 text-zinc-600'}`}>
+                                {notes}
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-wrap md:flex-nowrap -space-x-4">
                     {items.map(itm => (
@@ -223,6 +231,7 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                                 editLabel={t('weekly.edit')}
                                 hoyLabel={t('weekly.today')}
                                 emptyLabel={t('weekly.emptyOutfit')}
+                                notes={plan[day.date]?.notes}
                             />
                         );
                     })}

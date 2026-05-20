@@ -50,7 +50,14 @@ export function TodayOutfitWidget() {
                             <span className="bg-white text-black text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest">{t('today.today')}</span>
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{dayName} {displayDate}</span>
                         </div>
-                        <h3 className="text-3xl font-black uppercase tracking-tighter">{t('today.yourOutfit')}</h3>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-3xl font-black uppercase tracking-tighter">{t('today.yourOutfit')}</h3>
+                            {todayOutfit.notes && (
+                                <span className="bg-zinc-800 text-zinc-200 border border-zinc-700 text-[8px] font-black uppercase px-2.5 py-1 rounded-full tracking-wider">
+                                    {todayOutfit.notes}
+                                </span>
+                            )}
+                        </div>
                         {weather && (
                             <div className="flex items-center gap-2 mt-2 text-zinc-400">
                                 <WeatherIcon condition={weather.condition} code={weather.code} className="w-4 h-4" />

@@ -107,11 +107,12 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
                     const isToday = dateKey === formatDateKey(new Date());
                     const dOutfit = plan[dateKey];
                     const items = dOutfit?.items || [];
-
+                    const dayName = t(dayNamesKeys[date.getDay() === 0 ? 6 : date.getDay() - 1]);
                     return (
                         <div
                             key={dateKey}
-                            className={`aspect-square group relative rounded-3xl lg:rounded-[2rem] border transition-all ${isToday ? 'bg-black text-white shadow-xl' : 'bg-zinc-50 hover:bg-zinc-100 border-transparent hover:border-zinc-200'}`}
+                            onClick={() => setViewingDay({ name: dayName, date: dateKey })}
+                            className={`aspect-square group relative rounded-3xl lg:rounded-[2rem] border transition-all cursor-pointer ${isToday ? 'bg-black text-white shadow-xl' : 'bg-zinc-50 hover:bg-zinc-100 border-transparent hover:border-zinc-200'}`}
                         >
                             <div className="absolute top-2 left-3 md:top-4 md:left-6">
                                 <span className={`text-[10px] md:text-sm font-black ${isToday ? 'text-white' : 'text-zinc-400 group-hover:text-black'}`}>{date.getDate()}</span>
@@ -137,7 +138,10 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
                                     </div>
                                 ) : (
                                     <button 
-                                        onClick={() => setEditingDay({ name: t(dayNamesKeys[date.getDay() === 0 ? 6 : date.getDay() - 1]), date: dateKey })}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingDay({ name: dayName, date: dateKey });
+                                        }}
                                         className={`w-10 h-10 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${isToday ? 'bg-zinc-800 text-white' : 'bg-white text-zinc-300'}`}
                                     >
                                         <i className="fas fa-plus text-[10px]"></i>
@@ -145,11 +149,23 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
                                 )}
                             </div>
 
+                            {/* Note/Tag Display */}
+                            {dOutfit?.notes && (
+                                <div className="absolute bottom-2 left-2 right-2 text-center pointer-events-none overflow-hidden text-ellipsis whitespace-nowrap z-10">
+                                    <span className={`text-[7px] md:text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isToday ? 'bg-zinc-800 text-white border border-zinc-700' : 'bg-zinc-200 text-zinc-700'}`}>
+                                        {dOutfit.notes}
+                                    </span>
+                                </div>
+                            )}
+
                             {/* Mobile/Quick Actions Overlay */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-all p-1 bg-white/20 backdrop-blur-[2px] rounded-3xl lg:rounded-[2rem]">
                                 {items.length > 0 && (
                                     <button
-                                        onClick={() => setViewingDay({ name: t(dayNamesKeys[date.getDay() === 0 ? 6 : date.getDay() - 1]), date: dateKey })}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setViewingDay({ name: dayName, date: dateKey });
+                                        }}
                                         className="w-8 h-8 md:w-10 md:h-10 bg-black text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                                         title={t('monthly.view')}
                                     >
@@ -157,7 +173,10 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
                                     </button>
                                 )}
                                 <button
-                                    onClick={() => setEditingDay({ name: t(dayNamesKeys[date.getDay() === 0 ? 6 : date.getDay() - 1]), date: dateKey })}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingDay({ name: dayName, date: dateKey });
+                                    }}
                                     className="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                                     title={t('monthly.edit')}
                                 >

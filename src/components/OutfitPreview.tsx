@@ -141,6 +141,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [showItemPicker, setShowItemPicker] = useState(false);
     const [pickerOpenSection, setPickerOpenSection] = useState<Category | null>(null);
+    const [notes, setNotes] = useState(outfit.notes || outfit.event || '');
 
     const [maxZ, setMaxZ] = useState(() => {
         const indices = Object.values(outfit.canvasLayout || {}).map(p => p.zIndex);
@@ -194,7 +195,8 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
             await onSave({
                 items: canvasItems,
                 canvasLayout: layout,
-                canvasBackground: background
+                canvasBackground: background,
+                notes: notes.trim()
             });
             onClose();
         } catch (err) {
@@ -233,6 +235,22 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                         <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors">
                             <i className="fas fa-times text-zinc-500"></i>
                         </button>
+                    </div>
+                </div>
+
+                {/* Note / Label Input */}
+                <div className="w-full mb-4 px-2">
+                    <div className="relative flex items-center">
+                        <span className="absolute left-4 text-zinc-400">
+                            <i className="fas fa-tag text-xs"></i>
+                        </span>
+                        <input
+                            type="text"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder={t('outfit.notesPlaceholder')}
+                            className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:bg-white focus:ring-2 focus:ring-black/10 focus:border-black transition-all text-zinc-700"
+                        />
                     </div>
                 </div>
 

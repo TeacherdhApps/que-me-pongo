@@ -10,9 +10,9 @@ export function LanguageToggle() {
       title={locale === 'es' ? 'Switch to English' : 'Cambiar a Español'}
       aria-label={locale === 'es' ? 'Switch to English' : 'Cambiar a Español'}
     >
-      <span className={`lang-option ${locale === 'es' ? 'active' : ''}`}>Spa</span>
+      <span className={`lang-option ${locale === 'es' ? 'active' : ''}`}>ES</span>
       <span className="lang-divider">|</span>
-      <span className={`lang-option ${locale === 'en' ? 'active' : ''}`}>Eng</span>
+      <span className={`lang-option ${locale === 'en' ? 'active' : ''}`}>IN</span>
     </button>
   );
 }
