@@ -2,15 +2,14 @@
 
 ![App Preview](public/icon-512.png)
 
-_Tu armario al alcance de tu mano. Organiza tu ropa fácilmente, planifica tus outfits y recibe recomendaciones usando Inteligencia Artificial._
+_Tu armario al alcance de tu mano. Organiza tu ropa fácilmente, planifica tus outfits.
 
 ## Características Principales
 
 - ** Sincronización en la Nube**: Inicia sesión con Google (mediante Supabase) para guardar y mantener sincronizados todos tus outfits en cualquier dispositivo.
 - ** Progressive Web App (PWA)**: App instalable de forma nativa en tu teléfono móvil o escritorio. Funciona excepcionalmente rápido gracias a su sistema avanzado de *Service Worker* y cache.
-- ** Inteligencia Artificial (Google Gemini)**: Consigue las mejores sugerencias sobre qué ponerte utilizando la API de Google Gemini, basadas en tus prendas guardadas y en el clima local actual.
 - ** Integración del Clima en Vivo**: Conecta con los datos de **Open-Meteo API** para entender las condiciones meteorológicas y sugerir outfits relevantes y precisos.
-- ** Gestión Integral y Carga de Fotos**: Agrega partes superiores, inferiores, calzado y accesorios. Permite recorte, previsualización, y eliminación precisa de fotos/ítems. 
+- ** Gestión Integral y Carga de Fotos**: Agrega partes superiores, inferiores, calzado y abrigos, previsualización, y eliminación precisa de fotos/ítems. 
 
 ##  Tecnologías Utilizadas
 
