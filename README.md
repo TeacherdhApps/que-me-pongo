@@ -44,6 +44,32 @@ _Tu armario al alcance de tu mano. Organiza tu ropa fácilmente, planifica tus o
 - `npm run build`: Compila la app para producción.
 - `npm run preview`: Ejecuta la versión compilada como previsualizaicón local.
 - `npm run lint`: Revisa problemas y sugiere mejoras de código usando ESLint.
+- `npm run supabase-keep-alive`: Ejecuta una consulta ligera a la base de datos de Supabase para evitar que el proyecto en plan gratuito se pause por inactividad.
+
+## 🔄 Supabase Keep-Alive (Evitar pausa del plan gratuito)
+
+Para evitar que Supabase pause tu base de datos gratuita después de 7 días de inactividad, hemos incluido un script que realiza consultas ligeras a las tablas principales.
+
+### Opción A: GitHub Actions (Recomendado)
+El proyecto incluye un flujo de trabajo en `.github/workflows/supabase-keep-alive.yml` que se ejecuta automáticamente cada **5 días**. 
+
+Para activarlo:
+1. Sube tu código a GitHub.
+2. Ve a la configuración de tu repositorio en GitHub: **Settings > Secrets and variables > Actions**.
+3. Añade los siguientes secretos:
+   - `SUPABASE_URL`: Tu URL del proyecto Supabase (ej. `https://xxx.supabase.co`).
+   - `SUPABASE_ANON_KEY`: Tu clave anónima pública (`anon` `public`).
+
+### Opción B: Cron Local (Linux / macOS)
+Si prefieres ejecutar el cron en tu máquina local o servidor propio:
+1. Abre tu configuración de crontab:
+   ```bash
+   crontab -e
+   ```
+2. Añade la siguiente línea para ejecutar el script cada 5 días a medianoche (reemplaza `/absolute/path/to/project` por la ruta absoluta de tu proyecto):
+   ```cron
+   0 0 */5 * * /usr/bin/node /absolute/path/to/project/supabase-keep-alive.js >> /absolute/path/to/project/keep-alive.log 2>&1
+   ```
 
 ##  Contribuir
 
