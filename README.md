@@ -46,7 +46,7 @@ _Tu armario al alcance de tu mano. Organiza tu ropa fácilmente, planifica tus o
 - `npm run lint`: Revisa problemas y sugiere mejoras de código usando ESLint.
 - `npm run supabase-keep-alive`: Ejecuta una consulta ligera a la base de datos de Supabase para evitar que el proyecto en plan gratuito se pause por inactividad.
 
-## 🔄 Supabase Keep-Alive (Evitar pausa del plan gratuito)
+##  Supabase Keep-Alive (Evitar pausa del plan gratuito)
 
 Para evitar que Supabase pause tu base de datos gratuita después de 7 días de inactividad, hemos incluido un script que realiza consultas ligeras a las tablas principales.
 
