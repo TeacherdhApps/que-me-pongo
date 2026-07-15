@@ -4,6 +4,7 @@ import { Categories } from '../types';
 import { useWardrobe } from '../hooks/useWardrobe';
 import { useI18n } from '../i18n/I18nContext';
 import type { TranslationKey } from '../i18n/translations';
+import { toPng } from 'html-to-image';
 
 interface OutfitPreviewProps {
     outfit: DailyOutfit;
@@ -103,7 +104,7 @@ const DraggableItem = ({ item, position, onUpdate, bringToFront, onRemove }: Dra
             className={`flex flex-col items-center justify-center cursor-grab active:cursor-grabbing transition-all group ${isDragging || isResizing ? 'ring-2 ring-black/20 scale-105' : 'hover:ring-1 hover:ring-zinc-200'}`}
         >
             <div className="w-full h-full flex flex-col items-center pointer-events-none relative">
-                <img src={item.image} className="w-full h-full object-contain" alt={item.name} draggable="false" />
+                <img src={item.image} crossOrigin="anonymous" className="w-full h-full object-contain" alt={item.name} draggable="false" />
                 <span className="text-[7px] font-black uppercase tracking-widest text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4 bg-white/80 px-2 py-0.5 rounded-full border border-zinc-100 shadow-sm whitespace-nowrap">{item.name}</span>
             </div>
 
@@ -135,13 +136,40 @@ const DraggableItem = ({ item, position, onUpdate, bringToFront, onRemove }: Dra
 export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     const { wardrobe } = useWardrobe();
     const { t } = useI18n();
+    const canvasRef = useRef<HTMLDivElement>(null);
     const [canvasItems, setCanvasItems] = useState<ClothingItem[]>(outfit.items);
     const [layout, setLayout] = useState<CanvasLayout>(outfit.canvasLayout || {});
     const [background, setBackground] = useState(outfit.canvasBackground || 'dots');
     const [isSaving, setIsSaving] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [showItemPicker, setShowItemPicker] = useState(false);
     const [pickerOpenSection, setPickerOpenSection] = useState<Category | null>(null);
     const [notes, setNotes] = useState(outfit.notes || outfit.event || '');
+
+    const downloadBoard = async () => {
+        if (!canvasRef.current) return;
+        setIsDownloading(true);
+        try {
+            // Short delay to let any rendering/hover states settle
+            await new Promise(resolve => setTimeout(resolve, 150));
+            const dataUrl = await toPng(canvasRef.current, {
+                cacheBust: true,
+                style: {
+                    borderRadius: '0px',
+                    border: 'none',
+                }
+            });
+            const link = document.createElement('a');
+            link.download = `outfit-${outfit.day || 'moodboard'}-${outfit.date || 'date'}.png`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error('Error exporting outfit board:', err);
+            alert(t('outfit.downloadError'));
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     const [maxZ, setMaxZ] = useState(() => {
         const indices = Object.values(outfit.canvasLayout || {}).map(p => p.zIndex);
@@ -227,6 +255,22 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                     </div>
                     <div className="flex gap-2">
                         <button 
+                            onClick={downloadBoard}
+                            disabled={isDownloading}
+                            className="h-10 px-4 flex items-center gap-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                            title={t('outfit.download')}
+                        >
+                            {isDownloading ? (
+                                <>
+                                    <i className="fas fa-circle-notch fa-spin"></i> {t('outfit.downloading')}
+                                </>
+                            ) : (
+                                <>
+                                    <i className="fas fa-download"></i> {t('outfit.download')}
+                                </>
+                            )}
+                        </button>
+                        <button 
                             onClick={() => setShowItemPicker(true)}
                             className="h-10 px-4 flex items-center gap-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
                         >
@@ -269,6 +313,7 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
 
                 {/* Canvas Area */}
                 <div 
+                    ref={canvasRef}
                     className={`relative w-full flex-grow rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden mb-6 shadow-inner transition-all ${backgrounds.find(b => b.id === background)?.class}`} 
                     style={backgrounds.find(b => b.id === background)?.style}
                 >

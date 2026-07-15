@@ -184,6 +184,9 @@ export const translations = {
     'outfit.bgStudio': 'Estudio',
     'outfit.bgClean': 'Limpio',
     'outfit.notesPlaceholder': 'Etiqueta o nota (ej. Boda, Aniversario, Reunión, Playa)',
+    'outfit.download': 'Descargar Tablero',
+    'outfit.downloading': 'Descargando...',
+    'outfit.downloadError': 'Error al descargar el tablero.',
 
     // Today Widget
     'today.today': 'Hoy',
@@ -425,6 +428,9 @@ export const translations = {
     'outfit.bgStudio': 'Studio',
     'outfit.bgClean': 'Clean',
     'outfit.notesPlaceholder': 'Label or note (e.g. Wedding, Anniversary, Meeting, Beach)',
+    'outfit.download': 'Download Board',
+    'outfit.downloading': 'Downloading...',
+    'outfit.downloadError': 'Error downloading the board.',
 
     // Today Widget
     'today.today': 'Today',
