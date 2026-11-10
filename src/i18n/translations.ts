@@ -125,6 +125,7 @@ export const translations = {
     'weekly.emptyOutfit': 'Outfit vacío',
     'weekly.view': 'VER',
     'weekly.edit': 'EDITAR',
+    'weekly.paste': 'Pegar',
     'weekly.noOutfitToday': 'No hay un outfit planificado para hoy. Planifica un día primero.',
 
     // Days of week
@@ -162,6 +163,7 @@ export const translations = {
     // Monthly Planner
     'monthly.view': 'Ver',
     'monthly.edit': 'Editar',
+    'monthly.paste': 'Pegar look',
 
     // Outfit Editor
     'outfit.done': 'Listo',
@@ -184,9 +186,13 @@ export const translations = {
     'outfit.bgStudio': 'Estudio',
     'outfit.bgClean': 'Limpio',
     'outfit.notesPlaceholder': 'Etiqueta o nota (ej. Boda, Aniversario, Reunión, Playa)',
-    'outfit.download': 'Descargar Tablero',
+    'outfit.download': 'Descargar',
     'outfit.downloading': 'Descargando...',
     'outfit.downloadError': 'Error al descargar el tablero.',
+    'outfit.copy': 'Copiar',
+    'outfit.copying': 'Copiando...',
+    'outfit.copied': 'Copiado',
+    'outfit.copyError': 'Error al copiar el tablero.',
 
     // Today Widget
     'today.today': 'Hoy',
@@ -369,6 +375,7 @@ export const translations = {
     'weekly.emptyOutfit': 'Empty outfit',
     'weekly.view': 'VIEW',
     'weekly.edit': 'EDIT',
+    'weekly.paste': 'Paste',
     'weekly.noOutfitToday': 'No outfit planned for today. Plan a day first.',
 
     // Days of week
@@ -406,6 +413,7 @@ export const translations = {
     // Monthly Planner
     'monthly.view': 'View',
     'monthly.edit': 'Edit',
+    'monthly.paste': 'Paste look',
 
     // Outfit Editor
     'outfit.done': 'Done',
@@ -428,9 +436,13 @@ export const translations = {
     'outfit.bgStudio': 'Studio',
     'outfit.bgClean': 'Clean',
     'outfit.notesPlaceholder': 'Label or note (e.g. Wedding, Anniversary, Meeting, Beach)',
-    'outfit.download': 'Download Board',
+    'outfit.download': 'Download',
     'outfit.downloading': 'Downloading...',
     'outfit.downloadError': 'Error downloading the board.',
+    'outfit.copy': 'Copy',
+    'outfit.copying': 'Copying...',
+    'outfit.copied': 'Copied',
+    'outfit.copyError': 'Error copying the board.',
 
     // Today Widget
     'today.today': 'Today',

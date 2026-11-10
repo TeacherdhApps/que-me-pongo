@@ -5,6 +5,7 @@ import { useWardrobe } from '../hooks/useWardrobe';
 import { useI18n } from '../i18n/I18nContext';
 import type { TranslationKey } from '../i18n/translations';
 import { toPng } from 'html-to-image';
+import { copyOutfit } from '../lib/outfitClipboard';
 
 interface OutfitPreviewProps {
     outfit: DailyOutfit;
@@ -139,9 +140,10 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     const canvasRef = useRef<HTMLDivElement>(null);
     const [canvasItems, setCanvasItems] = useState<ClothingItem[]>(outfit.items);
     const [layout, setLayout] = useState<CanvasLayout>(outfit.canvasLayout || {});
-    const [background, setBackground] = useState(outfit.canvasBackground || 'dots');
+    const [background, setBackground] = useState('dots');
     const [isSaving, setIsSaving] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
     const [showItemPicker, setShowItemPicker] = useState(false);
     const [pickerOpenSection, setPickerOpenSection] = useState<Category | null>(null);
     const [notes, setNotes] = useState(outfit.notes || outfit.event || '');
@@ -171,23 +173,43 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
         }
     };
 
+    const copyLook = () => {
+        try {
+            copyOutfit({
+                ...outfit,
+                items: canvasItems,
+                canvasLayout: layout,
+                canvasBackground: background,
+                notes: notes.trim()
+            });
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch (err) {
+            console.error('Error copying outfit:', err);
+            alert(t('outfit.copyError'));
+        }
+    };
+
     const [maxZ, setMaxZ] = useState(() => {
         const indices = Object.values(outfit.canvasLayout || {}).map(p => p.zIndex);
         return indices.length > 0 ? Math.max(...indices) : 10;
     });
 
-    // Ensure all current items have a default layout position
+    // Ensure all current items have a default layout position that fits the canvas width
     useEffect(() => {
+        const canvasWidth = canvasRef.current?.clientWidth ?? 360;
+        const baseSize = Math.min(150, Math.max(90, canvasWidth * 0.4));
+        const offset = Math.max(16, baseSize * 0.25);
         const newLayout = { ...layout };
         let changed = false;
 
         canvasItems.forEach((item, index) => {
             if (!newLayout[item.id]) {
                 newLayout[item.id] = {
-                    x: 50 + (index * 40),
-                    y: 50 + (index * 40),
-                    w: 150,
-                    h: 150,
+                    x: Math.max(0, Math.min(offset + (index * offset), canvasWidth - baseSize)),
+                    y: offset + (index * offset),
+                    w: baseSize,
+                    h: baseSize,
                     zIndex: index + 1
                 };
                 changed = true;
@@ -197,11 +219,69 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
         if (changed) setLayout(newLayout);
     }, [canvasItems]);
 
+    // Keep every garment inside the canvas when the viewport (mobile width) changes
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const clampLayout = () => {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            if (!width || !height) return;
+
+            setLayout(prev => {
+                let changed = false;
+                const next = { ...prev };
+
+                Object.keys(next).forEach(id => {
+                    const pos = next[id];
+                    const w = Math.min(pos.w, width);
+                    const h = Math.min(pos.h, height);
+                    const x = Math.max(0, Math.min(pos.x, width - w));
+                    const y = Math.max(0, Math.min(pos.y, height - h));
+
+                    if (w !== pos.w || h !== pos.h || x !== pos.x || y !== pos.y) {
+                        next[id] = { ...pos, w, h, x, y };
+                        changed = true;
+                    }
+                });
+
+                return changed ? next : prev;
+            });
+        };
+
+        clampLayout();
+        window.addEventListener('resize', clampLayout);
+        return () => window.removeEventListener('resize', clampLayout);
+    }, [canvasItems.length]);
+
     const updateItemPosition = (id: string, updates: Partial<Position>) => {
-        setLayout(prev => ({
-            ...prev,
-            [id]: { ...prev[id], ...updates }
-        }));
+        setLayout(prev => {
+            const current = prev[id];
+            if (!current) return prev;
+
+            const maxW = canvasRef.current?.clientWidth;
+            const maxH = canvasRef.current?.clientHeight;
+            const next = {
+                ...current,
+                ...updates,
+                x: updates.x ?? current.x,
+                y: updates.y ?? current.y,
+                w: updates.w ?? current.w,
+                h: updates.h ?? current.h
+            };
+
+            if (maxW) {
+                next.w = Math.min(next.w, maxW);
+                next.x = Math.max(0, Math.min(next.x, maxW - next.w));
+            }
+            if (maxH) {
+                next.h = Math.min(next.h, maxH);
+                next.y = Math.max(0, Math.min(next.y, maxH - next.h));
+            }
+
+            return { ...prev, [id]: next };
+        });
     };
 
     const bringToFront = (id: string) => {
@@ -236,50 +316,50 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
     };
 
     const backgrounds = [
-        { id: 'dots', name: t('outfit.bgOriginal'), class: 'bg-zinc-50', style: { backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' } },
-        { id: 'marble', name: t('outfit.bgMarble'), class: 'bg-white', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/white-marble.png")' } },
-        { id: 'wood', name: t('outfit.bgWood'), class: 'bg-[#fdfcf0]', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/wood-pattern.png")' } },
-        { id: 'studio', name: t('outfit.bgStudio'), class: 'bg-gradient-to-b from-zinc-100 to-zinc-300' },
-        { id: 'minimal', name: t('outfit.bgClean'), class: 'bg-white' }
+        { id: 'dots', name: t('outfit.bgOriginal'), class: 'bg-zinc-50', style: { backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' } }
     ];
 
     return (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-md animate-fade">
-            <div className="bg-white border border-zinc-100 shadow-2xl rounded-[3rem] p-6 md:p-8 w-full max-w-4xl flex flex-col items-center overflow-hidden h-[90vh]">
-                <div className="w-full flex justify-between items-center mb-6 px-2">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-2 sm:p-4 bg-zinc-900/60 backdrop-blur-md animate-fade">
+            <div className="bg-white border border-zinc-100 shadow-2xl rounded-[2rem] sm:rounded-[3rem] p-3 sm:p-6 md:p-8 w-full max-w-4xl flex flex-col items-center overflow-y-auto overflow-x-hidden h-[95vh]">
+                <div className="w-full flex justify-between items-center mb-4 px-2">
                     <div>
                         <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">{t('outfit.createLook')}</h3>
                         <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">
                             {outfit.day} · {canvasItems.length} {t('outfit.garments')}
                         </p>
                     </div>
-                    <div className="flex flex-wrap justify-end gap-2">
-                        <button 
-                            onClick={downloadBoard}
-                            disabled={isDownloading}
-                            className="h-10 px-4 flex items-center gap-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-                            title={t('outfit.download')}
-                        >
-                            {isDownloading ? (
-                                <>
-                                    <i className="fas fa-circle-notch fa-spin"></i> {t('outfit.downloading')}
-                                </>
-                            ) : (
-                                <>
-                                    <i className="fas fa-download"></i> {t('outfit.download')}
-                                </>
-                            )}
-                        </button>
-                        <button 
-                            onClick={() => setShowItemPicker(true)}
-                            className="h-10 px-4 flex items-center gap-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[10px] font-black uppercase tracking-widest"
-                        >
-                            <i className="fas fa-plus"></i> {t('outfit.addGarment')}
-                        </button>
-                        <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors">
-                            <i className="fas fa-times text-zinc-500"></i>
-                        </button>
-                    </div>
+                    <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors">
+                        <i className="fas fa-times text-zinc-500"></i>
+                    </button>
+                </div>
+
+                {/* Symmetric Actions */}
+                <div className="grid grid-cols-3 gap-2 w-full mb-4 px-2">
+                    <button
+                        onClick={() => setShowItemPicker(true)}
+                        className="h-11 flex items-center justify-center gap-1.5 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <i className="fas fa-plus"></i>
+                        <span className="truncate">{t('outfit.add')}</span>
+                    </button>
+                    <button
+                        onClick={copyLook}
+                        className="h-11 flex items-center justify-center gap-1.5 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest"
+                        title={t('outfit.copy')}
+                    >
+                        <i className={`fas ${isCopied ? 'fa-check' : 'fa-copy'}`}></i>
+                        <span className="truncate">{isCopied ? t('outfit.copied') : t('outfit.copy')}</span>
+                    </button>
+                    <button
+                        onClick={() => { void downloadBoard(); }}
+                        disabled={isDownloading}
+                        className="h-11 flex items-center justify-center gap-1.5 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                        title={t('outfit.download')}
+                    >
+                        <i className={`fas ${isDownloading ? 'fa-circle-notch fa-spin' : 'fa-download'}`}></i>
+                        <span className="truncate">{isDownloading ? t('outfit.downloading') : t('outfit.download')}</span>
+                    </button>
                 </div>
 
                 {/* Note / Label Input */}
@@ -299,22 +379,24 @@ export function OutfitPreview({ outfit, onClose, onSave }: OutfitPreviewProps) {
                 </div>
 
                 {/* Background Selector */}
-                <div className="flex gap-3 mb-4 w-full overflow-x-auto pb-2 px-2 no-scrollbar">
-                    {backgrounds.map(bg => (
-                        <button
-                            key={bg.id}
-                            onClick={() => setBackground(bg.id)}
-                            className={`flex-shrink-0 px-4 py-2 rounded-full text-[8px] font-black uppercase tracking-widest transition-all border ${background === bg.id ? 'bg-black text-white border-black' : 'bg-white text-zinc-400 border-zinc-100'}`}
-                        >
-                            {bg.name}
-                        </button>
-                    ))}
-                </div>
+                {backgrounds.length > 1 && (
+                    <div className="flex gap-3 mb-4 w-full overflow-x-auto pb-2 px-2 no-scrollbar">
+                        {backgrounds.map(bg => (
+                            <button
+                                key={bg.id}
+                                onClick={() => setBackground(bg.id)}
+                                className={`flex-shrink-0 px-4 py-2 rounded-full text-[8px] font-black uppercase tracking-widest transition-all border ${background === bg.id ? 'bg-black text-white border-black' : 'bg-white text-zinc-400 border-zinc-100'}`}
+                            >
+                                {bg.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Canvas Area */}
                 <div 
                     ref={canvasRef}
-                    className={`relative w-full flex-grow rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden mb-6 shadow-inner transition-all ${backgrounds.find(b => b.id === background)?.class}`} 
+                    className={`relative w-full flex-1 min-h-[62.5vh] flex-shrink-0 rounded-3xl border-2 border-dashed border-zinc-200 overflow-hidden mb-6 shadow-inner transition-all ${backgrounds.find(b => b.id === background)?.class}`} 
                     style={backgrounds.find(b => b.id === background)?.style}
                 >
                     {canvasItems.map((item) => (

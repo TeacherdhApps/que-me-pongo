@@ -5,6 +5,7 @@ import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
 import { openGoogleCalendar } from '../lib/calendarSync';
 import { useI18n } from '../i18n/I18nContext';
+import { useCopiedOutfit } from '../lib/outfitClipboard';
 import type { ClothingItem } from '../types';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -14,14 +15,17 @@ interface DayInfo {
     displayDate: string;
 }
 
-const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, editLabel, hoyLabel, emptyLabel, notes }: {
+const PlannerDayCard = memo(({ day, items, onEdit, onView, onPaste, canPaste, isToday, viewLabel, editLabel, pasteLabel, hoyLabel, emptyLabel, notes }: {
     day: DayInfo;
     items: ClothingItem[];
     onEdit: (day: DayInfo) => void;
     onView: (day: DayInfo) => void;
+    onPaste: (day: DayInfo) => void;
+    canPaste: boolean;
     isToday: boolean;
     viewLabel: string;
     editLabel: string;
+    pasteLabel: string;
     hoyLabel: string;
     emptyLabel: string;
     notes?: string;
@@ -60,7 +64,16 @@ const PlannerDayCard = memo(({ day, items, onEdit, onView, isToday, viewLabel, e
                     )}
                 </div>
             </div>
-            <div className="flex gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
+                {canPaste && (
+                    <button
+                        onClick={() => onPaste(day)}
+                        className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-full transition-all flex items-center gap-2 ${isToday ? 'bg-zinc-800 text-white hover:bg-white hover:text-black' : 'bg-zinc-100 hover:bg-black hover:text-white'}`}
+                    >
+                        <i className="fas fa-paste text-[9px]"></i>
+                        {pasteLabel}
+                    </button>
+                )}
                 {items.length > 0 && (
                     <button
                         onClick={() => onView(day)}
@@ -106,6 +119,7 @@ const WeeklySkeleton = () => (
 export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 'month') => void }) {
     const { plan, isLoading, updateDay } = useWeeklyPlan();
     const { t } = useI18n();
+    const copiedOutfit = useCopiedOutfit();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [editingDay, setEditingDay] = useState<DayInfo | null>(null);
     const [viewingDay, setViewingDay] = useState<DayInfo | null>(null);
@@ -148,6 +162,15 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
         setCurrentDate(nextDate);
     };
 
+
+    const handlePaste = async (day: DayInfo) => {
+        if (!copiedOutfit) return;
+        await updateDay(day.date, {
+            ...copiedOutfit,
+            day: day.name,
+            date: day.date
+        });
+    };
 
     const handleGoogleCalendar = () => {
         // Export today's outfit or first available
@@ -226,9 +249,12 @@ export function WeeklyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 
                                 items={plan[day.date]?.items || []}
                                 onEdit={setEditingDay}
                                 onView={setViewingDay}
+                                onPaste={(targetDay) => { void handlePaste(targetDay); }}
+                                canPaste={Boolean(copiedOutfit) && copiedOutfit?.date !== day.date}
                                 isToday={isToday}
                                 viewLabel={t('weekly.view')}
                                 editLabel={t('weekly.edit')}
+                                pasteLabel={t('weekly.paste')}
                                 hoyLabel={t('weekly.today')}
                                 emptyLabel={t('weekly.emptyOutfit')}
                                 notes={plan[day.date]?.notes}

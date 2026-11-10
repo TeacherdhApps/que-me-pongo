@@ -4,11 +4,13 @@ import { useWeeklyPlan } from '../hooks/useWardrobe';
 import { OutfitEditor } from './OutfitEditor';
 import { OutfitPreview } from './OutfitPreview';
 import { useI18n } from '../i18n/I18nContext';
+import { useCopiedOutfit } from '../lib/outfitClipboard';
 import type { TranslationKey } from '../i18n/translations';
 
 export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' | 'month') => void }) {
     const { plan, isLoading, updateDay } = useWeeklyPlan();
     const { t } = useI18n();
+    const copiedOutfit = useCopiedOutfit();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [editingDay, setEditingDay] = useState<{ name: string, date: string } | null>(null);
     const [viewingDay, setViewingDay] = useState<{ name: string, date: string } | null>(null);
@@ -58,6 +60,15 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const d = String(date.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
+    };
+
+    const handlePaste = async (dateKey: string, dayName: string) => {
+        if (!copiedOutfit) return;
+        await updateDay(dateKey, {
+            ...copiedOutfit,
+            day: dayName,
+            date: dateKey
+        });
     };
 
     return (
@@ -159,7 +170,19 @@ export function MonthlyPlanner({ onViewChange }: { onViewChange: (view: 'week' |
                             )}
 
                             {/* Mobile/Quick Actions Overlay */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-all p-1 bg-white/20 backdrop-blur-[2px] rounded-3xl lg:rounded-[2rem]">
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 flex flex-wrap items-center justify-center gap-1 md:gap-2 transition-all p-1 bg-white/20 backdrop-blur-[2px] rounded-3xl lg:rounded-[2rem]">
+                                {copiedOutfit && copiedOutfit.date !== dateKey && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            void handlePaste(dateKey, dayName);
+                                        }}
+                                        className="w-8 h-8 md:w-10 md:h-10 bg-zinc-800 text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                                        title={t('monthly.paste')}
+                                    >
+                                        <i className="fas fa-paste text-[9px]"></i>
+                                    </button>
+                                )}
                                 {items.length > 0 && (
                                     <button
                                         onClick={(e) => {
